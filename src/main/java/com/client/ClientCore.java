@@ -37,7 +37,7 @@ public class ClientCore implements ClientModInitializer {
                     "key.client.open_gui",
                     InputConstants.Type.KEYSYM,
                     GLFW.GLFW_KEY_RIGHT_SHIFT,
-                    KeyBinding.CATEGORY_MISC
+                    KeyBinding.Category.MISC
             ));
         } catch (Throwable t) {
             LOGGER.error("Failed to register keybinding cleanly: ", t);
