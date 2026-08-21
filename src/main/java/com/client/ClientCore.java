@@ -7,8 +7,7 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.KeyMapping;
-import net.minecraft.client.Minecraft;
-import net.minecraft.resources.Identifier;
+import net.minecraft.client.KeyMapping.Category;
 import com.mojang.blaze3d.platform.InputConstants;
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
@@ -26,8 +25,10 @@ public class ClientCore implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         instance = this;
+
         moduleManager = new ModuleManager();
         moduleManager.init();
+
         configManager = new ConfigManager();
         configManager.loadConfig();
 
@@ -35,7 +36,7 @@ public class ClientCore implements ClientModInitializer {
                 "key.client.open_gui",
                 InputConstants.Type.KEYSYM,
                 GLFW.GLFW_KEY_RIGHT_SHIFT,
-                "category.client.general"
+                Category.register("category.client.general")
         ));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -49,7 +50,15 @@ public class ClientCore implements ClientModInitializer {
         LOGGER.info("Custom Client initialized.");
     }
 
-    public static ClientCore getInstance() { return instance; }
-    public ModuleManager getModuleManager() { return moduleManager; }
-    public ConfigManager getConfigManager() { return configManager; }
-  }
+    public static ClientCore getInstance() {
+        return instance;
+    }
+
+    public ModuleManager getModuleManager() {
+        return moduleManager;
+    }
+
+    public ConfigManager getConfigManager() {
+        return configManager;
+    }
+}
