@@ -32,12 +32,11 @@ public class ClientCore implements ClientModInitializer {
         this.moduleManager.init();
         this.configManager.loadConfig();
 
-        // ثبت دکمه بر اساس Yarn 1.21.11
         openGuiKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.client.open_gui",
                 InputUtil.Type.KEYSYM,
                 GLFW.GLFW_KEY_RIGHT_SHIFT,
-                KeyBinding.Category.MISC
+                "category.client.general"
         ));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
