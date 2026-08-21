@@ -1,0 +1,55 @@
+package com.client;
+
+import com.client.config.ConfigManager;
+import com.client.gui.ClientScreen;
+import com.client.module.ModuleManager;
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
+import net.minecraft.resources.Identifier;
+import com.mojang.blaze3d.platform.InputConstants;
+import org.lwjgl.glfw.GLFW;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class ClientCore implements ClientModInitializer {
+    public static final String MOD_ID = "client";
+    public static final Logger LOGGER = LoggerFactory.getLogger("CustomClient");
+
+    private static ClientCore instance;
+    private ModuleManager moduleManager;
+    private ConfigManager configManager;
+    private KeyMapping openGuiKey;
+
+    @Override
+    public void onInitializeClient() {
+        instance = this;
+        moduleManager = new ModuleManager();
+        moduleManager.init();
+        configManager = new ConfigManager();
+        configManager.loadConfig();
+
+        openGuiKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+                "key.client.open_gui",
+                InputConstants.Type.KEYSYM,
+                GLFW.GLFW_KEY_RIGHT_SHIFT,
+                "category.client.general"
+        ));
+
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            while (openGuiKey.consumeClick()) {
+                if (client.screen == null) {
+                    client.setScreen(new ClientScreen());
+                }
+            }
+        });
+
+        LOGGER.info("Custom Client initialized.");
+    }
+
+    public static ClientCore getInstance() { return instance; }
+    public ModuleManager getModuleManager() { return moduleManager; }
+    public ConfigManager getConfigManager() { return configManager; }
+  }
