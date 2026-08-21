@@ -32,17 +32,23 @@ public class ClientCore implements ClientModInitializer {
         this.moduleManager.init();
         this.configManager.loadConfig();
 
-        openGuiKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
-                "key.client.open_gui",
-                InputConstants.Type.KEYSYM,
-                GLFW.GLFW_KEY_RIGHT_SHIFT,
-                "category.client.general"
-        ));
+        try {
+            openGuiKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+                    "key.client.open_gui",
+                    InputConstants.Type.KEYSYM,
+                    GLFW.GLFW_KEY_RIGHT_SHIFT,
+                    "category.client.general"
+            ));
+        } catch (Exception e) {
+            LOGGER.error("Failed to register keybinding: ", e);
+        }
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            while (openGuiKey.consumeClick()) {
-                if (client.screen == null) {
-                    client.setScreen(new ClientScreen());
+            if (openGuiKey != null && client.getWindow() != null) {
+                while (openGuiKey.consumeClick()) {
+                    if (client.screen == null) {
+                        client.setScreen(new ClientScreen());
+                    }
                 }
             }
         });
