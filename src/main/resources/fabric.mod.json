@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "client",
+  "version": "${version}",
+  "name": "Custom Client",
+  "description": "A lightweight, non-cheating Minecraft PvP and performance client.",
+  "authors": ["Developer"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["com.client.ClientCore"]
+  },
+  "depends": {
+    "fabricloader": ">=0.18.1",
+    "minecraft": "1.21.11",
+    "java": ">=21",
+    "fabric-api": ">=0.141.6"
+  }
+}
