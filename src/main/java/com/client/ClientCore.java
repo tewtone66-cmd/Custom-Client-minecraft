@@ -7,7 +7,6 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.KeyMapping;
-import net.minecraft.client.KeyMapping.Category;
 import com.mojang.blaze3d.platform.InputConstants;
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
@@ -25,18 +24,20 @@ public class ClientCore implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         instance = this;
+        LOGGER.info("Starting Custom Client Architecture...");
 
-        moduleManager = new ModuleManager();
-        moduleManager.init();
+        this.moduleManager = new ModuleManager();
+        this.configManager = new ConfigManager();
 
-        configManager = new ConfigManager();
-        configManager.loadConfig();
+        this.moduleManager.init();
+        this.configManager.loadConfig();
 
+        // ساخت دکمه کلید راست شیفت بدون ساخت دستی Category اشتباه
         openGuiKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
                 "key.client.open_gui",
                 InputConstants.Type.KEYSYM,
                 GLFW.GLFW_KEY_RIGHT_SHIFT,
-                Category.register("category.client.general")
+                "category.client.general"
         ));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -47,7 +48,7 @@ public class ClientCore implements ClientModInitializer {
             }
         });
 
-        LOGGER.info("Custom Client initialized.");
+        LOGGER.info("Client initialization complete!");
     }
 
     public static ClientCore getInstance() {
