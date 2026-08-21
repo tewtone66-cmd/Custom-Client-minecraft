@@ -6,8 +6,8 @@ import com.client.module.ModuleManager;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
-import net.minecraft.client.KeyMapping;
-import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.util.InputUtil;
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +19,7 @@ public class ClientCore implements ClientModInitializer {
     private static ClientCore instance;
     private ModuleManager moduleManager;
     private ConfigManager configManager;
-    private KeyMapping openGuiKey;
+    private KeyBinding openGuiKey;
 
     @Override
     public void onInitializeClient() {
@@ -32,17 +32,17 @@ public class ClientCore implements ClientModInitializer {
         this.moduleManager.init();
         this.configManager.loadConfig();
 
-        // ثبت دکمه راست‌شیفت به‌صورت کاملاً استاندارد بدون ارسال Category متنی یا کلاسی
-        openGuiKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+        // ثبت دکمه بر اساس Yarn 1.21.11
+        openGuiKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.client.open_gui",
-                InputConstants.Type.KEYSYM,
+                InputUtil.Type.KEYSYM,
                 GLFW.GLFW_KEY_RIGHT_SHIFT,
-                KeyMapping.CATEGORY_INTERFACE
+                KeyBinding.Category.MISC
         ));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            while (openGuiKey.consumeClick()) {
-                if (client.screen == null) {
+            while (openGuiKey.wasPressed()) {
+                if (client.currentScreen == null) {
                     client.setScreen(new ClientScreen());
                 }
             }
