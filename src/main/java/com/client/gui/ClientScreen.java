@@ -7,7 +7,7 @@ import net.minecraft.network.chat.Component;
 public class ClientScreen extends Screen {
 
     public ClientScreen() {
-        super(Component.literal("Custom Client GUI"));
+        super(Component.literal("Custom Client Menu"));
     }
 
     @Override
@@ -16,19 +16,24 @@ public class ClientScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float delta) {
-        this.renderBackground(guiGraphics, mouseX, mouseY, delta);
-        guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, 20, 0xFFFFFFFF);
-        super.render(guiGraphics, mouseX, mouseY, delta);
-    }
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        // کشیدن پس‌زمینه نیمه‌شفاف تاریک
+        this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
+        
+        // رسم متن در مرکز صفحه
+        guiGraphics.drawCenteredString(
+                this.font,
+                "=== CUSTOM CLIENT GUI ===",
+                this.width / 2,
+                this.height / 2 - 10,
+                0xFFFFFF
+        );
 
-    @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        return super.mouseClicked(mouseX, mouseY, button);
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
     }
 
     @Override
     public boolean isPauseScreen() {
-        return false;
+        return false; // بازی حین باز بودن منو استپ نشود
     }
 }
