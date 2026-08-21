@@ -32,12 +32,12 @@ public class ClientCore implements ClientModInitializer {
         this.moduleManager.init();
         this.configManager.loadConfig();
 
-        // ساخت دکمه کلید راست شیفت بدون ساخت دستی Category اشتباه
+        // ثبت دکمه با استفاده از سازنده ۳ پارامتری یا دسته استاندارد بازی
         openGuiKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
                 "key.client.open_gui",
                 InputConstants.Type.KEYSYM,
                 GLFW.GLFW_KEY_RIGHT_SHIFT,
-                "category.client.general"
+                KeyMapping.CATEGORY_GAMEPLAY
         ));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
