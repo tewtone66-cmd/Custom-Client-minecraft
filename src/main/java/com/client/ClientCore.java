@@ -7,7 +7,6 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.KeyMapping;
-import net.minecraft.network.chat.Component;
 import com.mojang.blaze3d.platform.InputConstants;
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
@@ -34,7 +33,7 @@ public class ClientCore implements ClientModInitializer {
         this.configManager.loadConfig();
 
         try {
-            // ساخت KeyMapping با متد ایمن نسخه 1.21.11
+            // ساخت KeyMapping با فرمت دقیق 1.21.11
             openGuiKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
                     "key.client.open_gui",
                     InputConstants.Type.KEYSYM,
@@ -46,7 +45,7 @@ public class ClientCore implements ClientModInitializer {
         }
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            if (client != null && openGuiKey != null) {
+            if (openGuiKey != null && client != null) {
                 while (openGuiKey.consumeClick()) {
                     if (client.screen == null) {
                         client.setScreen(new ClientScreen());
