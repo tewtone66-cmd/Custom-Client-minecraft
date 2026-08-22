@@ -6,7 +6,7 @@ import com.client.module.ModuleManager;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
-import net.minecraft.client.KeyMapping;
+import net.minecraft.client.option.KeyBinding;
 import com.mojang.blaze3d.platform.InputConstants;
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
@@ -19,7 +19,7 @@ public class ClientCore implements ClientModInitializer {
     private static ClientCore instance;
     private ModuleManager moduleManager;
     private ConfigManager configManager;
-    private static KeyMapping openGuiKey;
+    private KeyBinding openGuiKey;
 
     @Override
     public void onInitializeClient() {
@@ -33,21 +33,21 @@ public class ClientCore implements ClientModInitializer {
         this.configManager.loadConfig();
 
         try {
-            // ساخت KeyMapping با فرمت دقیق 1.21.11
-            openGuiKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+            // ساخت دکمه بر اساس ساختار جدید KeyBinding.Category در 1.21.11
+            openGuiKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                     "key.client.open_gui",
                     InputConstants.Type.KEYSYM,
                     GLFW.GLFW_KEY_RIGHT_SHIFT,
-                    KeyMapping.CATEGORY_MISC
+                    KeyBinding.Category.MISC
             ));
         } catch (Throwable t) {
-            LOGGER.error("Failed to register keybinding cleanly: ", t);
+            LOGGER.error("Failed to register keybinding: ", t);
         }
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (openGuiKey != null && client != null) {
-                while (openGuiKey.consumeClick()) {
-                    if (client.screen == null) {
+                while (openGuiKey.wasPressed()) {
+                    if (client.currentScreen == null) {
                         client.setScreen(new ClientScreen());
                     }
                 }
