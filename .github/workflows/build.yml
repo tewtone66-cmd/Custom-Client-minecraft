@@ -30,6 +30,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: TewPvP-Nova-Client-1.2.0
-          path: build/libs/tewpvp-nova-client-1.2.0.jar
+          path: build/libs/*.jar
           if-no-files-found: error
           retention-days: 30
