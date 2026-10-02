@@ -55,7 +55,7 @@ public final class DownloadManager {
                 return;
             }
 
-            String safeName = fileName.replaceAll("[^a-zA-Z0-9._+()\- ]", "_");
+            String safeName = fileName.replaceAll("[^a-zA-Z0-9._+()- ]", "_");
             if (safeName.isBlank()) {
                 notifyUser("نام فایل معتبر نیست.");
                 return;
