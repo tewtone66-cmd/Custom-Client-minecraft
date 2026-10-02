@@ -24,8 +24,21 @@ jobs:
           curl -fsSL -o gradle.zip https://services.gradle.org/distributions/gradle-9.2.1-bin.zip
           unzip -q gradle.zip
           echo "$PWD/gradle-9.2.1/bin" >> "$GITHUB_PATH"
-      - name: Build once
-        run: gradle clean build --no-daemon
+      - name: Verify toolchain
+        run: |
+          java -version
+          gradle --version
+      - name: Clean and build from scratch
+        run: gradle clean build --refresh-dependencies --no-daemon --stacktrace
+      - name: Verify JAR output
+        shell: bash
+        run: |
+          set -euo pipefail
+          jars=(build/libs/*.jar)
+          if [ "${#jars[@]}" -ne 1 ]; then echo "Expected exactly one JAR, found ${#jars[@]}"; exit 1; fi
+          test -s "${jars[0]}"
+          unzip -t "${jars[0]}" >/dev/null
+          echo "Verified: ${jars[0]}"
       - name: Upload one Nova JAR
         uses: actions/upload-artifact@v4
         with:
