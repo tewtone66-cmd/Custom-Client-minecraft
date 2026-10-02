@@ -15,12 +15,12 @@ import java.util.List;
 import java.util.Locale;
 
 public final class ClientScreen extends Screen {
-    private static final int BG=0xFF060A12,CARD=0xFF121C2C,CARD2=0xFF18263A,HOVER=0xFF213651;
-    private static final int WHITE=0xFFF4F7FF,MUTED=0xFF8797B1,BLUE=0xFF35A7FF,CYAN=0xFF5CEBFF,GREEN=0xFF35D79B,RED=0xFFFF6078,PURPLE=0xFF9D7BFF;
+    private static final int BG=0xFF08050D,CARD=0xFF15101F,CARD2=0xFF1D152A,HOVER=0xFF2A1C3D;
+    private static final int WHITE=0xFFF8F4FF,MUTED=0xFF9B8EAA,BLUE=0xFF8B5CFF,CYAN=0xFFFF6BD6,GREEN=0xFF55E6A5,RED=0xFFFF5F7A,PURPLE=0xFFB56BFF;
     private enum Tab{HOME,MENU,HUD,PERFORMANCE,MODS,PACKS,SCHEMATICS,COSMETICS,SUPPORT}
     private Tab tab=Tab.HOME;
     private EditBox searchBox,urlBox;
-    private int left,top,side,cx,cy,cw,ch,ticks; private boolean compact;
+    private int left,top,side,cx,cy,cw,ch,ticks,catalogScroll; private boolean compact;
     private ModrinthCatalog.Type catalogType=ModrinthCatalog.Type.MOD;
     private List<ModrinthCatalog.Project> projects=List.of(); private int page,total; private boolean loading; private String error="";
     private final java.util.Set<String> queued=new java.util.HashSet<>();
@@ -36,13 +36,15 @@ public final class ClientScreen extends Screen {
         urlBox.setSuggestion("https://cdn.modrinth.com/...");
         urlBox.setMaxLength(500); addRenderableWidget(urlBox);
         syncFields();
-        if(tab==Tab.MODS||tab==Tab.PACKS)loadCatalog();
+        if(tab==Tab.MODS||tab==Tab.PACKS){catalogScroll=0;loadCatalog();}
     }
 
     private void layout(){
-        compact=width<800||height<560;
-        left=compact?7:14;top=compact?7:14;side=compact?118:168;
-        cx=left+side+10;cy=compact?48:58;cw=Math.max(220,width-cx-left);ch=Math.max(250,height-cy-top);
+        compact=width<760||height<520;
+        int frameW=Math.min(width-24,(int)(width*(compact?0.94:0.88)));
+        int frameH=Math.min(height-24,(int)(height*(compact?0.94:0.88)));
+        left=(width-frameW)/2;top=(height-frameH)/2;side=compact?112:150;
+        cx=left+side+10;cy=top+48;cw=Math.max(220,frameW-side-10);ch=Math.max(230,frameH-48);
     }
     private void syncFields(){
         if(searchBox!=null)searchBox.setVisible(tab==Tab.MODS||tab==Tab.PACKS);
@@ -56,7 +58,7 @@ public final class ClientScreen extends Screen {
     }
 
     private void animate(GuiGraphics g){
-        g.fill(0,0,width,height,BG);
+        g.fill(0,0,width,height,0x65000000);
         if(!ClientCore.CONFIG.animatedBackground)return;
         double t=ticks*.025;
         for(int i=0;i<18;i++){
@@ -76,13 +78,13 @@ public final class ClientScreen extends Screen {
 
     private void shell(GuiGraphics g,int mx,int my){
         int panel=ClientCore.CONFIG.glassUi?0xEC101927:0xFF0E1622;
-        g.fill(left,top,width-left,height-top,panel);
-        g.fill(left,top,width-left,top+2,CYAN);
+        g.fill(left-3,top-3,width-left+3,height-top+3,0x99000000);\n        g.fill(left,top,width-left,height-top,panel);
+        g.fill(left,top,width-left,top+2,CYAN);\n        g.fill(left,top+2,left+2,height-top,CYAN);
         g.fill(left+side,top+2,left+side+1,height-top,0xFF27364C);
         g.drawString(font,"TEW",left+15,top+11,CYAN,true);
         g.drawString(font,"PVP",left+45,top+11,WHITE,true);
         g.drawString(font,"NOVA",left+15,top+27,MUTED,true);
-        String s=Minecraft.getInstance().getFps()+" FPS  •  1.21.11";
+        String s="FPS "+Minecraft.getInstance().getFps()+"  •  NOVA 1.2";
         g.drawString(font,s,width-left-font.width(s)-12,top+13,WHITE,false);
     }
 
@@ -115,10 +117,10 @@ public final class ClientScreen extends Screen {
         g.drawString(font,"TEW",cx+34,y+17,CYAN,true);g.drawString(font,"PVP NOVA CLIENT",cx+67,y+17,WHITE,true);
         g.drawString(font,"Custom animated PvP lobby for Minecraft 1.21.11",cx+34,y+38,MUTED,false);
         g.drawString(font,"Responsive UI • live Modrinth manager • test cosmetics",cx+34,y+55,MUTED,false);
-        button(g,"CLIENT MENU",cx+34,y+78,128,31,mx,my,BLUE);
-        button(g,"HUD STUDIO",cx+170,y+78,112,31,mx,my,PURPLE);
-        button(g,"MOD CENTER",cx+290,y+78,112,31,mx,my,GREEN);
-        button(g,"COSMETICS",cx+410,y+78,112,31,mx,my,RED);
+        button(g,"CLIENT MENU",cx+34,y+78,112,31,mx,my,BLUE);
+        button(g,"HUD STUDIO",cx+152,y+78,100,31,mx,my,PURPLE);
+        button(g,"MOD CENTER",cx+260,y+78,104,31,mx,my,GREEN);
+        button(g,"COSMETICS",cx+372,y+78,104,31,mx,my,RED);
         int sy=y+h+10;if(sy+45<height-10){
             mini(g,"FPS",""+Minecraft.getInstance().getFps(),cx+16,sy,82,CYAN);
             mini(g,"HUD",ClientCore.CONFIG.hudEnabled?"ON":"OFF",cx+106,sy,82,ClientCore.CONFIG.hudEnabled?GREEN:RED);
@@ -169,7 +171,7 @@ public final class ClientScreen extends Screen {
         button(g,"↻",cx+cw-65,cy-2,35,22,mx,my,GREEN);
         g.drawString(font,loading?"Loading Modrinth…":(error.isBlank()?"Minecraft 1.21.11 • Fabric • live catalog":error),cx+16,cy+27,error.isBlank()?MUTED:RED,false);
         int cols=compact?1:2,gap=8,start=cy+46,w=Math.max(170,(cw-32-gap*(cols-1))/cols),h=compact?76:82;
-        for(int i=0;i<projects.size();i++){int col=i%cols,row=i/cols;projectCard(g,projects.get(i),cx+16+col*(w+gap),start+row*(h+gap),w,h,mx,my);}
+        if(!projects.isEmpty()){g.enableScissor(cx+10,cy+42,width-left-10,height-42); for(int i=0;i<projects.size();i++){int col=i%cols,row=i/cols;projectCard(g,projects.get(i),cx+16+col*(w+gap),start+row*(h+gap)-catalogScroll,w,h,mx,my);} g.disableScissor();}
         if(projects.isEmpty()&&!loading){card(g,cx+16,start,cw-32,76,mx,my);g.drawString(font,"No results. Try another search.",cx+30,start+21,WHITE,true);}
         int py=height-31;button(g,"‹",cx+16,py,27,23,mx,my,BLUE);g.drawString(font,"Page "+(page+1)+" / "+Math.max(1,(total+7)/8),cx+51,py+8,MUTED,false);button(g,"›",cx+132,py,27,23,mx,my,BLUE);
     }
@@ -260,8 +262,8 @@ public final class ClientScreen extends Screen {
     @Override public boolean mouseClicked(MouseButtonEvent e,boolean dbl){
         if(super.mouseClicked(e,dbl))return true;if(e.button()!=0)return false;double mx=e.x(),my=e.y();
         Tab[] tabs=Tab.values();int y=top+43,row=compact?27:29,gap=compact?3:4;
-        for(Tab t:tabs){if(inside(mx,my,left+7,y,side-14,row)){tab=t;syncFields();if(tab==Tab.MODS){catalogType=ModrinthCatalog.Type.MOD;page=0;loadCatalog();}if(tab==Tab.PACKS){catalogType=ModrinthCatalog.Type.RESOURCE_PACK;page=0;loadCatalog();}return true;}y+=row+gap;}
-        if(tab==Tab.HOME){int y0=cy+81;if(inside(mx,my,cx+34,y0,128,31))tab=Tab.MENU;else if(inside(mx,my,cx+170,y0,112,31))tab=Tab.HUD;else if(inside(mx,my,cx+290,y0,112,31))tab=Tab.MODS;else if(inside(mx,my,cx+410,y0,112,31))tab=Tab.COSMETICS;syncFields();return true;}
+        for(Tab t:tabs){if(inside(mx,my,left+7,y,side-14,row)){tab=t;syncFields();if(tab==Tab.MODS){catalogType=ModrinthCatalog.Type.MOD;page=0;catalogScroll=0;loadCatalog();}if(tab==Tab.PACKS){catalogType=ModrinthCatalog.Type.RESOURCE_PACK;page=0;catalogScroll=0;loadCatalog();}return true;}y+=row+gap;}
+        if(tab==Tab.HOME){int y0=cy+81;if(inside(mx,my,cx+34,y0,112,31))tab=Tab.MENU;else if(inside(mx,my,cx+152,y0,100,31))tab=Tab.HUD;else if(inside(mx,my,cx+260,y0,104,31))tab=Tab.MODS;else if(inside(mx,my,cx+372,y0,104,31))tab=Tab.COSMETICS;syncFields();return true;}
         if(tab==Tab.MENU){int[] ys={cy+18,cy+78,cy+138,cy+198,cy+258,cy+318};Tab[] ts={Tab.HUD,Tab.PERFORMANCE,Tab.MODS,Tab.PACKS,Tab.COSMETICS,Tab.SCHEMATICS};for(int i=0;i<ys.length;i++)if(inside(mx,my,cx+cw-84,ys[i]+14,56,25)){tab=ts[i];syncFields();if(tab==Tab.MODS||tab==Tab.PACKS)loadCatalog();return true;}return true;}
         if(tab==Tab.HUD)return clickRows(mx,my,new String[]{"hud","fps","keys","armor","counter","coords","cps","ping","potion","target","hit","crosshair","sprint"},cy);
         if(tab==Tab.PERFORMANCE){if(clickRows(mx,my,new String[]{"perf","particles","weather","compact","animated","glass","menuAnimations","lobbyParticles","itemAnimations","lowFire","cleanF3"},cy))return true;
@@ -275,11 +277,11 @@ public final class ClientScreen extends Screen {
 
     private boolean clickRows(double mx,double my,String[] keys,int start){int step=compact?29:31;for(int i=0;i<keys.length;i++){int y=start+i*step;if(inside(mx,my,cx+16,y,Math.max(190,cw-32),26)){ClientCore.CONFIG.toggle(keys[i]);return true;}}return false;}
     private boolean clickCatalog(double mx,double my){
-        if(inside(mx,my,cx+cw-128,cy-2,58,22)){catalogType=catalogType==ModrinthCatalog.Type.MOD?ModrinthCatalog.Type.RESOURCE_PACK:ModrinthCatalog.Type.MOD;page=0;loadCatalog();return true;}
+        if(inside(mx,my,cx+cw-128,cy-2,58,22)){catalogType=catalogType==ModrinthCatalog.Type.MOD?ModrinthCatalog.Type.RESOURCE_PACK:ModrinthCatalog.Type.MOD;page=0;catalogScroll=0;loadCatalog();return true;}
         if(inside(mx,my,cx+cw-65,cy-2,35,22)){loadCatalog();return true;}
         int cols=compact?1:2,gap=8,start=cy+46,w=Math.max(170,(cw-32-gap*(cols-1))/cols),h=compact?72:78;
-        for(int i=0;i<projects.size();i++){int col=i%cols,row=i/cols,x=cx+16+col*(w+gap),y=start+row*(h+gap);if(inside(mx,my,x+w-62,y+h-30,50,22)){queued.add(projects.get(i).id());ModrinthCatalog.download(projects.get(i),catalogType);return true;}}
-        int py=height-31;if(inside(mx,my,cx+16,py,27,23)&&page>0){page--;loadCatalog();return true;}if(inside(mx,my,cx+132,py,27,23)&&(page+1)*8<total){page++;loadCatalog();return true;}return true;
+        for(int i=0;i<projects.size();i++){int col=i%cols,row=i/cols,x=cx+16+col*(w+gap),y=start+row*(h+gap);if(inside(mx,my,x+w-62,y+h-30-catalogScroll,50,22)){queued.add(projects.get(i).id());ModrinthCatalog.download(projects.get(i),catalogType);return true;}}
+        int py=height-31; if(inside(mx,my,cx+16,py,27,23)&&page>0){page--;loadCatalog();return true;}if(inside(mx,my,cx+132,py,27,23)&&(page+1)*8<total){page++;loadCatalog();return true;}return true;
     }
     private void loadCatalog(){loading=true;error="";String q=searchBox==null?"":searchBox.getValue().trim();ModrinthCatalog.search(catalogType,q,page,r->{projects=r.projects();total=r.total();error=r.error()==null?"":r.error();loading=false;});}
     private void downloadSchematic(){
@@ -288,7 +290,7 @@ public final class ClientScreen extends Screen {
         if(!(name.endsWith(".litematic")||name.endsWith(".schem")||name.endsWith(".schematic"))){ClientCore.notify(Minecraft.getInstance(),"پسوند شماتیک معتبر نیست.");return;}
         DownloadManager.downloadSchematic(url,name);urlBox.setValue("");
     }
-    @Override public boolean keyPressed(net.minecraft.client.input.KeyEvent e){if((tab==Tab.MODS||tab==Tab.PACKS)&&e.key()==257){page=0;loadCatalog();return true;}return super.keyPressed(e);}
+    @Override public boolean mouseScrolled(double mouseX,double mouseY,double horizontalAmount,double verticalAmount){\n        if((tab==Tab.MODS||tab==Tab.PACKS)&&inside(mouseX,mouseY,cx+8,cy+38,cw-16,height-cy-68)){\n            int rows=Math.max(1,(projects.size()+((compact?1:2)-1))/(compact?1:2));\n            int maxScroll=Math.max(0,rows*(compact?84:90)-(height-cy-112));\n            catalogScroll=(int)Math.max(0,Math.min(maxScroll,catalogScroll-(verticalAmount>0?56:-56)));\n            return true;\n        }\n        return super.mouseScrolled(mouseX,mouseY,horizontalAmount,verticalAmount);\n    }\n\n    @Override public boolean keyPressed(net.minecraft.client.input.KeyEvent e){if((tab==Tab.MODS||tab==Tab.PACKS)&&e.key()==257){page=0;catalogScroll=0;loadCatalog();return true;}return super.keyPressed(e);}
     private boolean inside(double mx,double my,int x,int y,int w,int h){return mx>=x&&mx<=x+w&&my>=y&&my<=y+h;}
     @Override public void onClose(){Minecraft.getInstance().setScreen(null);}
     @Override public boolean isPauseScreen(){return false;}
