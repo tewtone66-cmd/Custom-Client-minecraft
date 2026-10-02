@@ -19,3 +19,5 @@ Original Fabric client-side PvP/FPS UI for **Minecraft Java 1.21.11**.
 Java 21 + Gradle + Fabric Loom for Minecraft 1.21.11.
 
 The release JAR is build/libs/tewpvp-nova-client-1.1.0.jar.
+
+Nova UI final build trigger.
