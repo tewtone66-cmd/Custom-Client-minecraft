@@ -13,11 +13,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.Properties;
 
 public final class ClientScreen extends Screen {
     private static final int BG=0xFF08050D,CARD=0xFF15101F,CARD2=0xFF1D152A,HOVER=0xFF2A1C3D;
     private static final int WHITE=0xFFF8F4FF,MUTED=0xFF9B8EAA,BLUE=0xFF8B5CFF,CYAN=0xFFFF6BD6,GREEN=0xFF55E6A5,RED=0xFFFF5F7A,PURPLE=0xFFB56BFF;
-    private enum Tab{HOME,MENU,HUD,PERFORMANCE,MODS,PACKS,SCHEMATICS,COSMETICS,SUPPORT}
+    private enum Tab{HOME,MENU,HUD,PERFORMANCE,MODS,PACKS,SCHEMATICS,COSMETICS,SUPPORT,PROFILES,THEMES}
     private Tab tab=Tab.HOME;
     private EditBox searchBox,urlBox;
     private int left,top,side,cx,cy,cw,ch,ticks,catalogScroll; private boolean compact;
@@ -80,19 +83,19 @@ public final class ClientScreen extends Screen {
         int panel=ClientCore.CONFIG.glassUi?0xEC101927:0xFF0E1622;
         g.fill(left-3,top-3,width-left+3,height-top+3,0x99000000);
         g.fill(left,top,width-left,height-top,panel);
-        g.fill(left,top,width-left,top+2,CYAN);
-        g.fill(left,top+2,left+2,height-top,CYAN);
+        g.fill(left,top,width-left,top+2,ClientCore.CONFIG.accent);
+        g.fill(left,top+2,left+2,height-top,ClientCore.CONFIG.accent);
         g.fill(left+side,top+2,left+side+1,height-top,0xFF27364C);
         g.drawString(font,"TEW",left+15,top+11,CYAN,true);
         g.drawString(font,"PVP",left+45,top+11,WHITE,true);
         g.drawString(font,"NOVA",left+15,top+27,MUTED,true);
-        String s="FPS "+Minecraft.getInstance().getFps()+"  •  NOVA 1.2";
+        String s="FPS "+Minecraft.getInstance().getFps()+"  •  NOVA 1.4";
         g.drawString(font,s,width-left-font.width(s)-12,top+13,WHITE,false);
     }
 
     private void sidebar(GuiGraphics g,int mx,int my){
         String[] names=compact?new String[]{"Lobby","Menu","HUD","Perf","Mods","Packs","Schematics","Cosmetics","Support"}:
-                new String[]{"Lobby","Client Menu","HUD Studio","Performance","Mod Center","Resource Packs","Schematics","Cosmetics","Support"};
+                new String[]{"Lobby","Client Menu","HUD Studio","Performance","Mod Center","Resource Packs","Schematics","Cosmetics","Support","Mod Profiles","Themes"};
         Tab[] tabs=Tab.values();int y=top+43,row=compact?27:29,gap=compact?3:4;
         for(int i=0;i<names.length;i++){
             boolean selected=tab==tabs[i],hover=inside(mx,my,left+7,y,side-14,row);
@@ -108,10 +111,10 @@ public final class ClientScreen extends Screen {
 
     private void content(GuiGraphics g,int mx,int my){
         String title=switch(tab){case HOME->"NOVA LOBBY";case MENU->"CLIENT MENU";case HUD->"HUD STUDIO";case PERFORMANCE->"PERFORMANCE";
-            case MODS->"MOD CENTER";case PACKS->"RESOURCE PACKS";case SCHEMATICS->"SCHEMATIC LIBRARY";case COSMETICS->"COSMETICS LAB";case SUPPORT->"SUPPORT";};
+            case MODS->"MOD CENTER";case PACKS->"RESOURCE PACKS";case SCHEMATICS->"SCHEMATIC LIBRARY";case COSMETICS->"COSMETICS LAB";case SUPPORT->"SUPPORT";case PROFILES->"MOD PROFILES";case THEMES->"THEME STUDIO";};
         g.drawString(font,title,cx+16,top+11,WHITE,true);
         switch(tab){case HOME->home(g,mx,my);case MENU->menu(g,mx,my);case HUD->hud(g,mx,my);case PERFORMANCE->performance(g,mx,my);
-            case MODS,PACKS->catalog(g,mx,my);case SCHEMATICS->schematics(g,mx,my);case COSMETICS->cosmetics(g,mx,my);case SUPPORT->support(g,mx,my);}
+            case MODS,PACKS->catalog(g,mx,my);case SCHEMATICS->schematics(g,mx,my);case COSMETICS->cosmetics(g,mx,my);case SUPPORT->support(g,mx,my);case PROFILES->profiles(g,mx,my);case THEMES->themes(g,mx,my);}
     }
 
     private void home(GuiGraphics g,int mx,int my){
@@ -226,6 +229,42 @@ public final class ClientScreen extends Screen {
         if(ClientCore.CONFIG.cosmetics&&ClientCore.CONFIG.motionTrail){for(int i=0;i<10;i++){int x=(int)((ticks*4+i*37)%Math.max(1,width-20));g.fill(x,height/2+i%5,x+2,height/2+2+i%5,PURPLE);}}
     }
 
+    private void profiles(GuiGraphics g,int mx,int my){
+        card(g,cx+16,cy+4,cw-32,72,mx,my);
+        g.drawString(font,"MOD PROFILES",cx+32,cy+19,WHITE,true);
+        g.drawString(font,"Save different HUD/performance setups and switch instantly.",cx+32,cy+39,MUTED,false);
+        String[] names={"PVP","FPS","VANILLA","SHOWCASE"};
+        int[] cols={BLUE,GREEN,MUTED,PURPLE};
+        for(int i=0;i<4;i++){
+            int x=cx+16+i*94;
+            button(g,names[i],x,cy+88,86,27,mx,my,cols[i]);
+        }
+        button(g,"SAVE CURRENT",cx+16,cy+126,110,27,mx,my,CYAN);
+        g.drawString(font,"Profiles are stored in .tewpvp-nova/profiles",cx+138,cy+135,MUTED,false);
+    }
+
+    private void themes(GuiGraphics g,int mx,int my){
+        card(g,cx+16,cy+4,cw-32,66,mx,my);
+        g.drawString(font,"THEME STUDIO",cx+32,cy+19,WHITE,true);
+        g.drawString(font,"Change the client accent instantly. Current: "+themeName(),cx+32,cy+39,MUTED,false);
+        int[] colors={0xFFFF6BD6,0xFF38BDF8,0xFF34D399,0xFFFF8A5B,0xFFFFC857,0xFF7DD3FC,0xFFC084FC,0xFFE5E7EB};
+        String[] names={"NOVA","OCEAN","EMERALD","SUNSET","GOLD","ICE","VOID","MONO"};
+        for(int i=0;i<8;i++){
+            int col=i%4,row=i/4,x=cx+16+col*94,y=cy+84+row*48;
+            g.fill(x,y,x+86,y+38,0xFF15101F);
+            g.fill(x+7,y+7,x+25,y+31,colors[i]);
+            g.drawString(font,names[i],x+32,y+14,WHITE,true);
+        }
+    }
+
+    private String themeName(){
+        int a=ClientCore.CONFIG.accent;
+        int[] colors={0xFFFF6BD6,0xFF38BDF8,0xFF34D399,0xFFFF8A5B,0xFFFFC857,0xFF7DD3FC,0xFFC084FC,0xFFE5E7EB};
+        String[] names={"NOVA","OCEAN","EMERALD","SUNSET","GOLD","ICE","VOID","MONO"};
+        for(int i=0;i<colors.length;i++)if(colors[i]==a)return names[i];
+        return "CUSTOM";
+    }
+
     private void support(GuiGraphics g,int mx,int my){
         card(g,cx+16,cy+4,cw-32,126,mx,my);g.drawString(font,"NOVA STATUS",cx+32,cy+20,WHITE,true);
         g.drawString(font,"● UI READY",cx+32,cy+41,GREEN,true);g.drawString(font,"Modrinth manager: live",cx+32,cy+59,MUTED,false);
@@ -256,7 +295,7 @@ public final class ClientScreen extends Screen {
         case "lobbyGlow"->ClientCore.CONFIG.lobbyGlow;case "nameplate"->ClientCore.CONFIG.nameplate;case "motionTrail"->ClientCore.CONFIG.motionTrail;default->false;};}
 
     private void mini(GuiGraphics g,String a,String b,int x,int y,int w,int color){g.fill(x,y,x+w,y+42,CARD);g.drawString(font,a,x+8,y+7,MUTED,false);g.drawString(font,b,x+8,y+23,color,true);}
-    private void card(GuiGraphics g,int x,int y,int w,int h,int mx,int my){boolean hover=inside(mx,my,x,y,w,h);g.fill(x+3,y+3,x+w+3,y+h+3,0x70000000);g.fill(x,y,x+w,y+h,hover?0xFF1C3048:CARD);g.fill(x,y,x+w,y+2,CYAN);g.fill(x,y,x+1,y+h,0xFF29435F);}
+    private void card(GuiGraphics g,int x,int y,int w,int h,int mx,int my){boolean hover=inside(mx,my,x,y,w,h);g.fill(x+3,y+3,x+w+3,y+h+3,0x70000000);g.fill(x,y,x+w,y+h,hover?0xFF1C3048:CARD);g.fill(x,y,x+w,y+2,ClientCore.CONFIG.accent);g.fill(x,y,x+1,y+h,0xFF29435F);}
     private void button(GuiGraphics g,String s,int x,int y,int w,int h,int mx,int my,int accent){boolean hover=inside(mx,my,x,y,w,h);g.fill(x,y,x+w,y+h,hover?accent:0xFF1A2940);g.fill(x,y,x+w,y+2,accent);g.fill(x,y+h-2,x+w,y+h,hover?accent:0xFF263A55);g.drawString(font,s,x+(w-font.width(s))/2,y+(h-8)/2,WHITE,true);}
     private String trim(String s,int max){if(s==null)return "";if(font.width(s)<=max)return s;String o=s;while(o.length()>1&&font.width(o+"…")>max)o=o.substring(0,o.length()-1);return o+"…";}
     private String downloads(long n){return n>=1_000_000?String.format(Locale.ROOT,"%.1fM",n/1_000_000d):n>=1000?String.format(Locale.ROOT,"%.1fK",n/1000d):""+n;}
@@ -271,10 +310,50 @@ public final class ClientScreen extends Screen {
         if(tab==Tab.PERFORMANCE){if(clickRows(mx,my,new String[]{"perf","particles","weather","compact","animated","glass","menuAnimations","lobbyParticles","itemAnimations","lowFire","cleanF3"},cy))return true;
             int by=cy+(compact?180:188);if(inside(mx,my,cx+120,by+10,45,24))ClientCore.CONFIG.fpsLimit=60;else if(inside(mx,my,cx+170,by+10,50,24))ClientCore.CONFIG.fpsLimit=120;else if(inside(mx,my,cx+225,by+10,50,24))ClientCore.CONFIG.fpsLimit=240;else if(inside(mx,my,cx+280,by+10,35,24))ClientCore.CONFIG.fpsLimit=1000;else if(inside(mx,my,cx+105,by+49,28,23))ClientCore.CONFIG.uiScale=Math.max(75,ClientCore.CONFIG.uiScale-5);else if(inside(mx,my,cx+138,by+49,28,23))ClientCore.CONFIG.uiScale=Math.min(125,ClientCore.CONFIG.uiScale+5);return true;}
         if(tab==Tab.MODS||tab==Tab.PACKS)return clickCatalog(mx,my);
+        if(tab==Tab.PROFILES){
+            String[] names={"PVP","FPS","VANILLA","SHOWCASE"};
+            int[] xs={cx+16,cx+110,cx+204,cx+298};
+            for(int i=0;i<4;i++)if(inside(mx,my,xs[i],cy+88,86,27)){applyProfile(names[i]);return true;}
+            if(inside(mx,my,cx+16,cy+126,110,27)){saveProfile("CURRENT");ClientCore.notify(Minecraft.getInstance(),"پروفایل فعلی ذخیره شد.");return true;}
+            return true;
+        }
+        if(tab==Tab.THEMES){
+            int[] colors={0xFFFF6BD6,0xFF38BDF8,0xFF34D399,0xFFFF8A5B,0xFFFFC857,0xFF7DD3FC,0xFFC084FC,0xFFE5E7EB};
+            for(int i=0;i<8;i++){int col=i%4,row=i/4,x=cx+16+col*94,y=cy+84+row*48;if(inside(mx,my,x,y,86,38)){ClientCore.CONFIG.accent=colors[i];return true;}}
+            return true;
+        }
         if(tab==Tab.COSMETICS){if(inside(mx,my,cx+cw-150,cy+22,116,26)){ClientCore.CONFIG.cosmetics=!ClientCore.CONFIG.cosmetics;return true;}String[] k={"neonCrosshair","orbitRing","hitFlash","lobbyGlow","nameplate","motionTrail"};int cols=compact?1:2,cgap=8,w=Math.max(170,(cw-32-cgap*(cols-1))/cols);for(int i=0;i<k.length;i++){int x=cx+16+(i%cols)*(w+cgap),y0=cy+90+(i/cols)*52;if(inside(mx,my,x,y0,w,44)){ClientCore.CONFIG.toggle(k[i]);return true;}}return true;}
         if(tab==Tab.SCHEMATICS){if(inside(mx,my,cx+32,cy+75,100,25))downloadSchematic();return true;}
         if(tab==Tab.SUPPORT&&inside(mx,my,cx+32,cy+91,142,25)){try{Files.createDirectories(Minecraft.getInstance().gameDirectory.toPath().resolve(".tewpvp-nova").resolve("diagnostics"));ClientCore.notify(Minecraft.getInstance(),"diagnostics آماده شد.");}catch(Exception ignored){}return true;}
         return true;
+    }
+
+    private void applyProfile(String name){
+        if(name.equals("PVP")){ClientCore.CONFIG.performanceMode=true;ClientCore.CONFIG.particles=false;ClientCore.CONFIG.weather=false;ClientCore.CONFIG.hudEnabled=true;ClientCore.CONFIG.keystrokes=true;ClientCore.CONFIG.itemCounters=true;ClientCore.CONFIG.armorHud=true;ClientCore.CONFIG.targetHud=true;ClientCore.CONFIG.animatedBackground=false;}
+        else if(name.equals("FPS")){ClientCore.CONFIG.performanceMode=true;ClientCore.CONFIG.particles=false;ClientCore.CONFIG.weather=false;ClientCore.CONFIG.animatedBackground=false;ClientCore.CONFIG.lobbyParticles=false;ClientCore.CONFIG.itemAnimations=false;ClientCore.CONFIG.compactHud=true;}
+        else if(name.equals("VANILLA")){ClientCore.CONFIG.hudEnabled=false;ClientCore.CONFIG.fpsHud=false;ClientCore.CONFIG.keystrokes=false;ClientCore.CONFIG.armorHud=false;ClientCore.CONFIG.itemCounters=false;ClientCore.CONFIG.coords=false;ClientCore.CONFIG.cpsHud=false;ClientCore.CONFIG.potionHud=false;ClientCore.CONFIG.targetHud=false;ClientCore.CONFIG.customCrosshair=false;ClientCore.CONFIG.performanceMode=false;}
+        else {ClientCore.CONFIG.hudEnabled=true;ClientCore.CONFIG.fpsHud=true;ClientCore.CONFIG.keystrokes=true;ClientCore.CONFIG.armorHud=true;ClientCore.CONFIG.itemCounters=true;ClientCore.CONFIG.coords=true;ClientCore.CONFIG.cpsHud=true;ClientCore.CONFIG.pingHud=true;ClientCore.CONFIG.potionHud=true;ClientCore.CONFIG.targetHud=true;ClientCore.CONFIG.customCrosshair=true;ClientCore.CONFIG.animatedBackground=true;ClientCore.CONFIG.lobbyParticles=true;ClientCore.CONFIG.cosmetics=true;ClientCore.CONFIG.motionTrail=true;}
+        saveProfile(name);
+        ClientCore.notify(Minecraft.getInstance(),"پروفایل "+name+" فعال شد.");
+    }
+
+    private void saveProfile(String name){
+        try{
+            Path dir=Minecraft.getInstance().gameDirectory.toPath().resolve(".tewpvp-nova").resolve("profiles");
+            Files.createDirectories(dir);
+            Properties p=new Properties();
+            p.setProperty("accent",""+ClientCore.CONFIG.accent);
+            p.setProperty("fpsLimit",""+ClientCore.CONFIG.fpsLimit);
+            p.setProperty("hud",""+ClientCore.CONFIG.hudEnabled);
+            p.setProperty("keystrokes",""+ClientCore.CONFIG.keystrokes);
+            p.setProperty("armor",""+ClientCore.CONFIG.armorHud);
+            p.setProperty("counters",""+ClientCore.CONFIG.itemCounters);
+            p.setProperty("performance",""+ClientCore.CONFIG.performanceMode);
+            p.setProperty("particles",""+ClientCore.CONFIG.particles);
+            p.setProperty("animated",""+ClientCore.CONFIG.animatedBackground);
+            p.setProperty("cosmetics",""+ClientCore.CONFIG.cosmetics);
+            try(OutputStream out=Files.newOutputStream(dir.resolve(name.toLowerCase(Locale.ROOT)+".properties"))){p.store(out,"TewPvP Nova profile");}
+        }catch(Exception ignored){}
     }
 
     private boolean clickRows(double mx,double my,String[] keys,int start){int step=compact?29:31;for(int i=0;i<keys.length;i++){int y=start+i*step;if(inside(mx,my,cx+16,y,Math.max(190,cw-32),26)){ClientCore.CONFIG.toggle(keys[i]);return true;}}return false;}
