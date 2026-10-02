@@ -78,8 +78,10 @@ public final class ClientScreen extends Screen {
 
     private void shell(GuiGraphics g,int mx,int my){
         int panel=ClientCore.CONFIG.glassUi?0xEC101927:0xFF0E1622;
-        g.fill(left-3,top-3,width-left+3,height-top+3,0x99000000);\n        g.fill(left,top,width-left,height-top,panel);
-        g.fill(left,top,width-left,top+2,CYAN);\n        g.fill(left,top+2,left+2,height-top,CYAN);
+        g.fill(left-3,top-3,width-left+3,height-top+3,0x99000000);
+        g.fill(left,top,width-left,height-top,panel);
+        g.fill(left,top,width-left,top+2,CYAN);
+        g.fill(left,top+2,left+2,height-top,CYAN);
         g.fill(left+side,top+2,left+side+1,height-top,0xFF27364C);
         g.drawString(font,"TEW",left+15,top+11,CYAN,true);
         g.drawString(font,"PVP",left+45,top+11,WHITE,true);
@@ -290,7 +292,17 @@ public final class ClientScreen extends Screen {
         if(!(name.endsWith(".litematic")||name.endsWith(".schem")||name.endsWith(".schematic"))){ClientCore.notify(Minecraft.getInstance(),"پسوند شماتیک معتبر نیست.");return;}
         DownloadManager.downloadSchematic(url,name);urlBox.setValue("");
     }
-    @Override public boolean mouseScrolled(double mouseX,double mouseY,double horizontalAmount,double verticalAmount){\n        if((tab==Tab.MODS||tab==Tab.PACKS)&&inside(mouseX,mouseY,cx+8,cy+38,cw-16,height-cy-68)){\n            int rows=Math.max(1,(projects.size()+((compact?1:2)-1))/(compact?1:2));\n            int maxScroll=Math.max(0,rows*(compact?84:90)-(height-cy-112));\n            catalogScroll=(int)Math.max(0,Math.min(maxScroll,catalogScroll-(verticalAmount>0?56:-56)));\n            return true;\n        }\n        return super.mouseScrolled(mouseX,mouseY,horizontalAmount,verticalAmount);\n    }\n\n    @Override public boolean keyPressed(net.minecraft.client.input.KeyEvent e){if((tab==Tab.MODS||tab==Tab.PACKS)&&e.key()==257){page=0;catalogScroll=0;loadCatalog();return true;}return super.keyPressed(e);}
+    @Override public boolean mouseScrolled(double mouseX,double mouseY,double horizontalAmount,double verticalAmount){
+        if((tab==Tab.MODS||tab==Tab.PACKS)&&inside(mouseX,mouseY,cx+8,cy+38,cw-16,height-cy-68)){
+            int rows=Math.max(1,(projects.size()+((compact?1:2)-1))/(compact?1:2));
+            int maxScroll=Math.max(0,rows*(compact?84:90)-(height-cy-112));
+            catalogScroll=(int)Math.max(0,Math.min(maxScroll,catalogScroll-(verticalAmount>0?56:-56)));
+            return true;
+        }
+        return super.mouseScrolled(mouseX,mouseY,horizontalAmount,verticalAmount);
+    }
+
+    @Override public boolean keyPressed(net.minecraft.client.input.KeyEvent e){if((tab==Tab.MODS||tab==Tab.PACKS)&&e.key()==257){page=0;catalogScroll=0;loadCatalog();return true;}return super.keyPressed(e);}
     private boolean inside(double mx,double my,int x,int y,int w,int h){return mx>=x&&mx<=x+w&&my>=y&&my<=y+h;}
     @Override public void onClose(){Minecraft.getInstance().setScreen(null);}
     @Override public boolean isPauseScreen(){return false;}
