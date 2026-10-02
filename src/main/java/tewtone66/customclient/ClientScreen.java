@@ -168,21 +168,38 @@ public final class ClientScreen extends Screen {
         button(g,catalogType==ModrinthCatalog.Type.MOD?"MODS":"PACKS",cx+cw-128,cy-2,58,22,mx,my,BLUE);
         button(g,"↻",cx+cw-65,cy-2,35,22,mx,my,GREEN);
         g.drawString(font,loading?"Loading Modrinth…":(error.isBlank()?"Minecraft 1.21.11 • Fabric • live catalog":error),cx+16,cy+27,error.isBlank()?MUTED:RED,false);
-        int cols=compact?1:2,gap=8,start=cy+46,w=Math.max(170,(cw-32-gap*(cols-1))/cols),h=compact?72:78;
+        int cols=compact?1:2,gap=8,start=cy+46,w=Math.max(170,(cw-32-gap*(cols-1))/cols),h=compact?76:82;
         for(int i=0;i<projects.size();i++){int col=i%cols,row=i/cols;projectCard(g,projects.get(i),cx+16+col*(w+gap),start+row*(h+gap),w,h,mx,my);}
         if(projects.isEmpty()&&!loading){card(g,cx+16,start,cw-32,76,mx,my);g.drawString(font,"No results. Try another search.",cx+30,start+21,WHITE,true);}
         int py=height-31;button(g,"‹",cx+16,py,27,23,mx,my,BLUE);g.drawString(font,"Page "+(page+1)+" / "+Math.max(1,(total+7)/8),cx+51,py+8,MUTED,false);button(g,"›",cx+132,py,27,23,mx,my,BLUE);
     }
 
     private void projectCard(GuiGraphics g,ModrinthCatalog.Project p,int x,int y,int w,int h,int mx,int my){
-        boolean hover=inside(mx,my,x,y,w,h);g.fill(x,y,x+w,y+h,hover?HOVER:CARD2);g.fill(x,y,x+3,y+h,p.projectType().equals("mod")?BLUE:GREEN);
+        boolean hover=inside(mx,my,x,y,w,h);
+        int accent=p.projectType().equals("mod")?BLUE:GREEN;
+        g.fill(x+2,y+2,x+w+2,y+h+2,0x70000000);
+        g.fill(x,y,x+w,y+h,hover?0xFF213651:CARD2);
+        g.fill(x,y,x+4,y+h,accent);
         Identifier icon=ModrinthCatalog.icon(p.iconUrl());
-        if(icon!=null)g.blit(RenderPipelines.GUI_TEXTURED,icon,x+10,y+10,0,0,40,40,256,256);else{g.fill(x+10,y+10,x+50,y+50,0xFF29415F);String a=p.title().isBlank()?"?":p.title().substring(0,1);g.drawString(font,a,x+24,y+23,CYAN,true);}
-        g.drawString(font,trim(p.title(),w-128),x+60,y+9,WHITE,true);
-        g.drawString(font,trim(p.description(),w-128),x+60,y+27,MUTED,false);
-        g.drawString(font,downloads(p.downloads())+" downloads",x+60,y+44,0xFF6F7F98,false);
-        String state=queued.contains(p.id())?"DOWNLOADING":"GET";
-        button(g,state,x+w-62,y+h-30,50,22,mx,my,state.equals("DOWNLOADING")?GREEN:BLUE);
+        if(icon!=null)g.blit(RenderPipelines.GUI_TEXTURED,icon,x+11,y+10,0,0,40,40,256,256);
+        else{g.fill(x+11,y+10,x+51,y+50,0xFF29415F);String a=p.title().isBlank()?"?":p.title().substring(0,1);g.drawString(font,a,x+25,y+23,CYAN,true);}
+        g.drawString(font,trim(p.title(),w-128),x+61,y+8,WHITE,true);
+        g.drawString(font,trim(p.description(),w-128),x+61,y+25,MUTED,false);
+        g.drawString(font,downloads(p.downloads())+" downloads",x+61,y+42,0xFF8A9AB2,false);
+        DownloadManager.Snapshot ds=DownloadManager.snapshot(p.id());
+        if(ds!=null&&!ds.finished()){
+            String pct=ds.percent()>=0?ds.percent()+"%":"...";
+            g.drawString(font,pct+"  "+String.format(Locale.ROOT,"%.1f MB",ds.receivedMb())+(ds.totalMb()>0?"/"+String.format(Locale.ROOT,"%.1f MB",ds.totalMb()):"")+"  "+String.format(Locale.ROOT,"%.1f MB/s",ds.speedMb()),x+61,y+57,CYAN,true);
+            int bx=x+61,by=y+h-11,bw=Math.max(60,w-126);
+            g.fill(bx,by,bx+bw,by+4,0xFF27364C);
+            int fill=ds.percent()>=0?(int)(bw*ds.percent()/100.0):0;
+            if(fill>0)g.fill(bx,by,bx+fill,by+4,accent);
+            button(g,"...",x+w-51,y+h-29,41,22,mx,my,accent);
+        }else{
+            boolean done=ds!=null&&ds.finished()&&ds.success();
+            button(g,done?"INSTALLED":"GET",x+w-70,y+h-30,58,22,mx,my,done?GREEN:accent);
+            if(ds!=null&&ds.finished()&&!ds.success())g.drawString(font,"FAILED",x+61,y+57,RED,true);
+        }
     }
 
     private void schematics(GuiGraphics g,int mx,int my){
@@ -235,8 +252,8 @@ public final class ClientScreen extends Screen {
         case "lobbyGlow"->ClientCore.CONFIG.lobbyGlow;case "nameplate"->ClientCore.CONFIG.nameplate;case "motionTrail"->ClientCore.CONFIG.motionTrail;default->false;};}
 
     private void mini(GuiGraphics g,String a,String b,int x,int y,int w,int color){g.fill(x,y,x+w,y+42,CARD);g.drawString(font,a,x+8,y+7,MUTED,false);g.drawString(font,b,x+8,y+23,color,true);}
-    private void card(GuiGraphics g,int x,int y,int w,int h,int mx,int my){g.fill(x+2,y+2,x+w+2,y+h+2,0x55000000);g.fill(x,y,x+w,y+h,inside(mx,my,x,y,w,h)?HOVER:CARD);g.fill(x,y,x+w,y+1,0x5535A7FF);}
-    private void button(GuiGraphics g,String s,int x,int y,int w,int h,int mx,int my,int accent){boolean hover=inside(mx,my,x,y,w,h);g.fill(x,y,x+w,y+h,hover?accent:0xFF1E2C41);g.drawString(font,s,x+(w-font.width(s))/2,y+(h-8)/2,WHITE,true);}
+    private void card(GuiGraphics g,int x,int y,int w,int h,int mx,int my){boolean hover=inside(mx,my,x,y,w,h);g.fill(x+3,y+3,x+w+3,y+h+3,0x70000000);g.fill(x,y,x+w,y+h,hover?0xFF1C3048:CARD);g.fill(x,y,x+w,y+2,CYAN);g.fill(x,y,x+1,y+h,0xFF29435F);}
+    private void button(GuiGraphics g,String s,int x,int y,int w,int h,int mx,int my,int accent){boolean hover=inside(mx,my,x,y,w,h);g.fill(x,y,x+w,y+h,hover?accent:0xFF1A2940);g.fill(x,y,x+w,y+2,accent);g.fill(x,y+h-2,x+w,y+h,hover?accent:0xFF263A55);g.drawString(font,s,x+(w-font.width(s))/2,y+(h-8)/2,WHITE,true);}
     private String trim(String s,int max){if(s==null)return "";if(font.width(s)<=max)return s;String o=s;while(o.length()>1&&font.width(o+"…")>max)o=o.substring(0,o.length()-1);return o+"…";}
     private String downloads(long n){return n>=1_000_000?String.format(Locale.ROOT,"%.1fM",n/1_000_000d):n>=1000?String.format(Locale.ROOT,"%.1fK",n/1000d):""+n;}
 
