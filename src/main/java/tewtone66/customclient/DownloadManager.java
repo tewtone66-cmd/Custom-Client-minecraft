@@ -21,26 +21,22 @@ public final class DownloadManager {
     public static void downloadResourcePack(String url,String fileName){download(url,Minecraft.getInstance().gameDirectory.toPath().resolve("resourcepacks"),fileName,false);}
     public static void downloadSchematic(String url,String fileName){download(url,Minecraft.getInstance().gameDirectory.toPath().resolve(".tewpvp-nova").resolve("schematics"),fileName,false);}
     public static void downloadCustom(String url,String fileName,String type){if("mod".equals(type))downloadMod(url,fileName);else if("resourcepack".equals(type))downloadResourcePack(url,fileName);else if("schematic".equals(type))downloadSchematic(url,fileName);}
+    public static boolean installed(String type,String fileName){
+        Path dir=switch(type){case "mod"->Minecraft.getInstance().gameDirectory.toPath().resolve("mods");case "resourcepack"->Minecraft.getInstance().gameDirectory.toPath().resolve("resourcepacks");case "schematic"->Minecraft.getInstance().gameDirectory.toPath().resolve(".tewpvp-nova").resolve("schematics");default->Minecraft.getInstance().gameDirectory.toPath();};
+        return Files.isRegularFile(dir.resolve(fileName).normalize());
+    }
     private static void download(String url,Path directory,String fileName,boolean restartRequired){
         try{
             URI uri=URI.create(url);String host=uri.getHost();
             if(host==null||!TRUSTED_HOSTS.contains(host.toLowerCase(Locale.ROOT))){notifyUser("برای امنیت، فقط منابع مورداعتماد مجاز هستند.");return;}
-            String safeName=fileName.replaceAll("[^a-zA-Z0-9._+()- ]","_");
-            if(safeName.isBlank()){notifyUser("نام فایل معتبر نیست.");return;}
-            Files.createDirectories(directory);Path target=directory.resolve(safeName).normalize();
-            if(!target.getParent().equals(directory.normalize())){notifyUser("مسیر فایل نامعتبر است.");return;}
+            String safeName=fileName.replaceAll("[^a-zA-Z0-9._+()- ]","_");if(safeName.isBlank()){notifyUser("نام فایل معتبر نیست.");return;}
+            Files.createDirectories(directory);Path target=directory.resolve(safeName).normalize();if(!target.getParent().equals(directory.normalize())){notifyUser("مسیر فایل نامعتبر است.");return;}
             notifyUser("دانلود شروع شد: "+safeName);
-            HttpRequest request=HttpRequest.newBuilder(uri).timeout(Duration.ofMinutes(5)).header("User-Agent","tewtone66/TewPvP-Nova-Client/1.1.0").GET().build();
-            CompletableFuture.runAsync(()->{
-                try{
-                    HttpResponse<Path> response=HTTP.send(request,HttpResponse.BodyHandlers.ofFile(target));
-                    if(response.statusCode()>=200&&response.statusCode()<300)Minecraft.getInstance().execute(()->{
-                        notifyUser("دانلود شد: "+safeName);
-                        if(!restartRequired)Minecraft.getInstance().reloadResourcePacks();else notifyUser("برای فعال شدن مود جدید، بازی را دوباره اجرا کن.");
-                    });
-                    else{Files.deleteIfExists(target);notifyUser("دانلود ناموفق بود. کد: "+response.statusCode());}
-                }catch(Exception e){try{Files.deleteIfExists(target);}catch(IOException ignored){}notifyUser("خطا در دانلود: "+e.getMessage());}
-            });
+            HttpRequest request=HttpRequest.newBuilder(uri).timeout(Duration.ofMinutes(5)).header("User-Agent","tewtone66/TewPvP-Nova-Client/1.2.0").GET().build();
+            CompletableFuture.runAsync(()->{try{HttpResponse<Path> response=HTTP.send(request,HttpResponse.BodyHandlers.ofFile(target));
+                if(response.statusCode()>=200&&response.statusCode()<300)Minecraft.getInstance().execute(()->{notifyUser("دانلود شد: "+safeName);if(!restartRequired)Minecraft.getInstance().reloadResourcePacks();else notifyUser("برای فعال شدن مود جدید، بازی را دوباره اجرا کن.");});
+                else{Files.deleteIfExists(target);notifyUser("دانلود ناموفق بود. کد: "+response.statusCode());}
+            }catch(Exception e){try{Files.deleteIfExists(target);}catch(IOException ignored){}notifyUser("خطا در دانلود: "+e.getMessage());}});
         }catch(Exception e){notifyUser("لینک دانلود معتبر نیست.");}
     }
     private static void notifyUser(String message){Minecraft mc=Minecraft.getInstance();mc.execute(()->ClientCore.notify(mc,message));}
