@@ -319,7 +319,7 @@ public final class ClientScreen extends Screen {
         }
         if(tab==Tab.THEMES){
             int[] colors={0xFFFF6BD6,0xFF38BDF8,0xFF34D399,0xFFFF8A5B,0xFFFFC857,0xFF7DD3FC,0xFFC084FC,0xFFE5E7EB};
-            for(int i=0;i<8;i++){int col=i%4,row=i/4,x=cx+16+col*94,y=cy+84+row*48;if(inside(mx,my,x,y,86,38)){ClientCore.CONFIG.accent=colors[i];return true;}}
+            for(int i=0;i<8;i++){int colorCol=i%4,colorRow=i/4,colorX=cx+16+colorCol*94,colorY=cy+84+colorRow*48;if(inside(mx,my,colorX,colorY,86,38)){ClientCore.CONFIG.accent=colors[i];return true;}}
             return true;
         }
         if(tab==Tab.COSMETICS){if(inside(mx,my,cx+cw-150,cy+22,116,26)){ClientCore.CONFIG.cosmetics=!ClientCore.CONFIG.cosmetics;return true;}String[] k={"neonCrosshair","orbitRing","hitFlash","lobbyGlow","nameplate","motionTrail"};int cols=compact?1:2,cgap=8,w=Math.max(170,(cw-32-cgap*(cols-1))/cols);for(int i=0;i<k.length;i++){int x=cx+16+(i%cols)*(w+cgap),y0=cy+90+(i/cols)*52;if(inside(mx,my,x,y0,w,44)){ClientCore.CONFIG.toggle(k[i]);return true;}}return true;}
