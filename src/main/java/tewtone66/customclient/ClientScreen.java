@@ -86,7 +86,7 @@ public final class ClientScreen extends Screen {
         g.fill(left,top,width-left,top+2,ClientCore.CONFIG.accent);
         g.fill(left,top+2,left+2,height-top,ClientCore.CONFIG.accent);
         g.fill(left+side,top+2,left+side+1,height-top,0xFF27364C);
-        g.drawString(font,"TEW",left+15,top+11,CYAN,true);
+        g.drawString(font,"TEW",left+15,top+11,ClientCore.CONFIG.accent,true);
         g.drawString(font,"PVP",left+45,top+11,WHITE,true);
         g.drawString(font,"NOVA",left+15,top+27,MUTED,true);
         String s="FPS "+Minecraft.getInstance().getFps()+"  •  NOVA 1.4";
@@ -100,7 +100,7 @@ public final class ClientScreen extends Screen {
         for(int i=0;i<names.length;i++){
             boolean selected=tab==tabs[i],hover=inside(mx,my,left+7,y,side-14,row);
             g.fill(left+7,y,left+side-7,y+row,selected?0xFF1D3B60:(hover?HOVER:0x00121B2A));
-            if(selected)g.fill(left+7,y,left+10,y+row,CYAN);
+            if(selected)g.fill(left+7,y,left+10,y+row,ClientCore.CONFIG.accent);
             g.drawString(font,names[i],left+16,y+(row-8)/2,selected?WHITE:MUTED,false); y+=row+gap;
         }
         if(!compact){
@@ -119,7 +119,7 @@ public final class ClientScreen extends Screen {
 
     private void home(GuiGraphics g,int mx,int my){
         int y=cy+3,h=compact?126:142;card(g,cx+16,y,cw-32,h,mx,my);
-        g.drawString(font,"TEW",cx+34,y+17,CYAN,true);g.drawString(font,"PVP NOVA CLIENT",cx+67,y+17,WHITE,true);
+        g.drawString(font,"TEW",cx+34,y+17,ClientCore.CONFIG.accent,true);g.drawString(font,"PVP NOVA CLIENT",cx+67,y+17,WHITE,true);
         g.drawString(font,"Custom animated PvP lobby for Minecraft 1.21.11",cx+34,y+38,MUTED,false);
         g.drawString(font,"Responsive UI • live Modrinth manager • test cosmetics",cx+34,y+55,MUTED,false);
         button(g,"CLIENT MENU",cx+34,y+78,112,31,mx,my,BLUE);
@@ -127,13 +127,13 @@ public final class ClientScreen extends Screen {
         button(g,"MOD CENTER",cx+260,y+78,104,31,mx,my,GREEN);
         button(g,"COSMETICS",cx+372,y+78,104,31,mx,my,RED);
         int sy=y+h+10;if(sy+45<height-10){
-            mini(g,"FPS",""+Minecraft.getInstance().getFps(),cx+16,sy,82,CYAN);
+            mini(g,"FPS",""+Minecraft.getInstance().getFps(),cx+16,sy,82,ClientCore.CONFIG.accent);
             mini(g,"HUD",ClientCore.CONFIG.hudEnabled?"ON":"OFF",cx+106,sy,82,ClientCore.CONFIG.hudEnabled?GREEN:RED);
             mini(g,"ANIM",ClientCore.CONFIG.animatedBackground?"LIVE":"OFF",cx+196,sy,92,BLUE);
-            mini(g,"BUILD","NOVA 1.2",cx+296,sy,105,PURPLE);
+            mini(g,"BUILD","NOVA 1.4",cx+296,sy,105,PURPLE);
         }
         if(ClientCore.CONFIG.neonCrosshair){
-            int ox=width/2,oy=height/2;g.fill(ox-6,oy,ox+7,oy+1,CYAN);g.fill(ox,oy-6,ox+1,oy+7,CYAN);
+            int ox=width/2,oy=height/2;g.fill(ox-6,oy,ox+7,oy+1,ClientCore.CONFIG.accent);g.fill(ox,oy-6,ox+1,oy+7,ClientCore.CONFIG.accent);
         }
     }
 
