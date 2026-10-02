@@ -2,6 +2,7 @@ package tewtone66.customclient;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -67,8 +68,11 @@ public final class ClientScreen extends Screen {
         g.drawString(font, on ? "§aON" : "§cOFF", x + 226, y + 8, 0xFFFFFF, false);
     }
 
-    @Override public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button != 0) return super.mouseClicked(mouseX, mouseY, button);
+    @Override public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        int button = event.button();
+        if (button != 0) return super.mouseClicked(event, doubleClick);
         int y = panelY;
         int x1 = panelX + 20, x2 = panelX + panelW / 2 + 8;
         String key = null;
@@ -80,7 +84,7 @@ public final class ClientScreen extends Screen {
             if (inside(mouseX, mouseY, x2, ys[i], 260, 25)) key = right[i];
         }
         if (key != null) { ClientCore.CONFIG.toggle(key); return true; }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(event, doubleClick);
     }
 
     private boolean inside(double mx, double my, int x, int y, int w, int h) { return mx >= x && mx <= x + w && my >= y && my <= y + h; }
