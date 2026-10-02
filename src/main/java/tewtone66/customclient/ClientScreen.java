@@ -94,7 +94,7 @@ public final class ClientScreen extends Screen {
     }
 
     private void sidebar(GuiGraphics g,int mx,int my){
-        String[] names=compact?new String[]{"Lobby","Menu","HUD","Perf","Mods","Packs","Schematics","Cosmetics","Support"}:
+        String[] names=compact?new String[]{"Lobby","Menu","HUD","Perf","Mods","Packs","Schem","Cosmetics","Support","Profiles","Themes"}:
                 new String[]{"Lobby","Client Menu","HUD Studio","Performance","Mod Center","Resource Packs","Schematics","Cosmetics","Support","Mod Profiles","Themes"};
         Tab[] tabs=Tab.values();int y=top+43,row=compact?27:29,gap=compact?3:4;
         for(int i=0;i<names.length;i++){
