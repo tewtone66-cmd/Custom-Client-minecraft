@@ -24,7 +24,8 @@ public final class ClientScreen extends Screen {
 
     @Override public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
         // Draw our own dim background instead of calling Screen.renderBackground().
-        g.fill(0, 0, width, height, 0xA0101018);\n        int slide = 12 - Math.min(12, anim);
+        g.fill(0, 0, width, height, 0xA0101018);
+        int slide = 12 - Math.min(12, anim);
         int x = panelX, y = panelY + slide;
         g.fill(x + 4, y + 5, x + panelW + 4, y + panelH + 5, 0x66000000);
         g.fill(x, y, x + panelW, y + panelH, 0xF0101420);
