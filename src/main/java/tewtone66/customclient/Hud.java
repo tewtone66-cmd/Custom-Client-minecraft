@@ -11,7 +11,7 @@ public final class Hud {
         Config c = ClientCore.CONFIG;
         if (!c.hudEnabled) return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null || mc.options.hideGui) return;
+        if (mc.player == null || mc.level == null || mc.options.hideGui || mc.screen != null) return;
 
         int w = mc.getWindow().getGuiScaledWidth();
         int h = mc.getWindow().getGuiScaledHeight();
