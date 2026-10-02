@@ -36,7 +36,12 @@ public final class ClientCore implements ClientModInitializer {
             }
         });
 
-        ScreenEvents.afterBackground(TitleScreen.class).register((screen, graphics, mouseX, mouseY, delta) -> LobbyRenderer.render(screen, graphics, delta));
+        ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> {
+            if (screen instanceof TitleScreen) {
+                ScreenEvents.afterBackground(screen).register((s, graphics, mouseX, mouseY, delta) ->
+                        LobbyRenderer.render(s, graphics, delta));
+            }
+        });
 
         HudElementRegistry.addLast(
                 net.minecraft.resources.Identifier.fromNamespaceAndPath(MOD_ID, "hud"),
