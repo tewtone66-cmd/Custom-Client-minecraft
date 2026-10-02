@@ -34,15 +34,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          jars=(build/libs/*.jar)
-          if [ "${#jars[@]}" -ne 1 ]; then echo "Expected exactly one JAR, found ${#jars[@]}"; exit 1; fi
+          mapfile -t jars < <(find build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*-sources.jar' -print)
+          if [ "${#jars[@]}" -ne 1 ]; then
+            echo "Expected exactly one runtime JAR, found ${#jars[@]}"
+            printf '%s
+' "${jars[@]}"
+            exit 1
+          fi
           test -s "${jars[0]}"
           unzip -t "${jars[0]}" >/dev/null
           echo "Verified: ${jars[0]}"
+          echo "NOVA_JAR=${jars[0]}" >> "$GITHUB_ENV"
       - name: Upload one Nova JAR
         uses: actions/upload-artifact@v4
         with:
           name: TewPvP-Nova-Client-1.4.0
-          path: build/libs/*.jar
+          path: ${{ env.NOVA_JAR }}
           if-no-files-found: error
           retention-days: 30
