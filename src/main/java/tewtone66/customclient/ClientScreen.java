@@ -5,481 +5,237 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Locale;
 
 public final class ClientScreen extends Screen {
-    private static final int BG = 0xFF080C16;
-    private static final int CARD = 0xFF1A2436;
-    private static final int CARD_HOVER = 0xFF24334B;
-    private static final int MUTED = 0xFF91A0B8;
-    private static final int WHITE = 0xFFF4F7FF;
-    private static final int BLUE = 0xFF2B8CFF;
-    private static final int GREEN = 0xFF38D996;
-    private static final int RED = 0xFFFF5C73;
+    private static final int BG=0xFF070B14,PANEL=0xF5101726,CARD=0xFF131F31,HOVER=0xFF203451;
+    private static final int WHITE=0xFFF5F8FF,MUTED=0xFF8E9BB2,BLUE=0xFF39A7FF,CYAN=0xFF55E8FF;
+    private static final int GREEN=0xFF35D69B,RED=0xFFFF5F78,PURPLE=0xFF9B7BFF;
+    private enum Tab{HOME,MENU,HUD,PERFORMANCE,MODS,PACKS,SCHEMATICS,COSMETICS,SUPPORT}
+    private Tab tab=Tab.HOME;
+    private EditBox searchBox;
+    private int left,top,sidebarW,contentX,contentY,contentW,contentH,ticks;
+    private boolean compact;
+    private ModrinthCatalog.Type catalogType=ModrinthCatalog.Type.MOD;
+    private List<ModrinthCatalog.Project> projects=List.of();
+    private int catalogPage,catalogTotal;
+    private String catalogError="";
+    private boolean catalogLoading;
 
-    private enum Tab {
-        HOME, HUD, PERFORMANCE, MODS, PACKS, SCHEMATICS, COSMETICS, SUPPORT
+    public ClientScreen(){super(Component.literal("TewPvP Nova Client"));}
+
+    @Override protected void init(){
+        layout();
+        searchBox=new EditBox(font,contentX+18,contentY-2,Math.max(120,Math.min(320,contentW-170)),22,Component.literal("Search"));
+        searchBox.setMaxLength(100);
+        searchBox.setSuggestion("Search Modrinth...");
+        searchBox.setVisible(tab==Tab.MODS||tab==Tab.PACKS);
+        addRenderableWidget(searchBox);
+        if(tab==Tab.MODS||tab==Tab.PACKS)loadCatalog();
     }
-
-    private Tab tab = Tab.HOME;
-    private EditBox urlBox;
-    private int left;
-    private int top;
-    private int contentX;
-    private int contentY;
-    private int contentW;
-    private int contentH;
-    private long ticks;
-
-    public ClientScreen() {
-        super(Component.literal("TewPvP Lobby"));
+    private void layout(){
+        compact=width<760||height<520;
+        left=compact?8:18;top=compact?8:18;sidebarW=compact?118:176;
+        contentX=left+sidebarW+12;contentY=compact?54:66;
+        contentW=Math.max(250,width-contentX-left);contentH=Math.max(260,height-contentY-top);
     }
-
-    @Override
-    protected void init() {
-        left = 18;
-        top = 18;
-        contentX = 196;
-        contentY = 66;
-        contentW = Math.max(360, width - contentX - 18);
-        contentH = Math.max(260, height - contentY - 18);
-
-        urlBox = new EditBox(font, contentX + 18, contentY + contentH - 42,
-                Math.min(520, contentW - 155), 22, Component.literal("Download URL"));
-        urlBox.setSuggestion("https://cdn.modrinth.com/...");
-        urlBox.setMaxLength(500);
-        urlBox.setVisible(tab == Tab.MODS || tab == Tab.PACKS || tab == Tab.SCHEMATICS);
-        addRenderableWidget(urlBox);
+    @Override public void tick(){ticks++;}
+    @Override public void render(GuiGraphics g,int mx,int my,float delta){
+        renderAnimatedLobby(g);drawShell(g);drawSidebar(g,mx,my);drawContent(g,mx,my);
+        if(searchBox!=null&&searchBox.visible)searchBox.render(g,mx,my,delta);
     }
-
-    @Override
-    public void tick() {
-        ticks++;
-    }
-
-    @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
-        renderAnimatedLobby(g);
-        drawShell(g);
-        drawSidebar(g, mouseX, mouseY);
-        drawContent(g, mouseX, mouseY);
-    }
-
-    private void renderAnimatedLobby(GuiGraphics g) {
-        g.fill(0, 0, width, height, BG);
-        if (!ClientCore.CONFIG.animatedBackground) return;
-
-        int wave = (int) ((Math.sin(ticks * 0.035) + 1.0) * 18);
-        int x = (int) ((Math.sin(ticks * 0.018) + 1) * Math.max(1, width - 160) / 2);
-        int y = (int) ((Math.cos(ticks * 0.022) + 1) * Math.max(1, height - 100) / 2);
-        g.fill(x, 0, Math.min(width, x + 160), height, 0x081A66FF);
-        g.fill(0, y, width, Math.min(height, y + 100), 0x0600C8FF);
-        g.fill(0, 0, width, 3 + wave / 6, 0x182B8CFF);
-    }
-
-    private void drawShell(GuiGraphics g) {
-        int alpha = ClientCore.CONFIG.glassUi ? 0xE6101624 : 0xFF101722;
-        g.fill(left, top, width - left, height - top, alpha);
-        g.fill(left, top, width - left, top + 3, BLUE);
-        g.fill(left + 174, top + 3, left + 175, height - top, 0xFF26344A);
-
-        g.drawString(font, "TEW", left + 18, top + 18, BLUE, true);
-        g.drawString(font, "PVP", left + 50, top + 18, WHITE, true);
-        g.drawString(font, "CUSTOM CLIENT", left + 18, top + 34, MUTED, false);
-
-        String status = Minecraft.getInstance().getFps() + " FPS  •  1.21.11";
-        g.drawString(font, status, width - left - font.width(status) - 18, top + 18, WHITE, false);
-    }
-
-    private void drawSidebar(GuiGraphics g, int mx, int my) {
-        String[] names = {"Lobby", "HUD", "Performance", "Mods", "Resource Packs", "Schematics", "Cosmetics", "Support"};
-        Tab[] tabs = Tab.values();
-
-        int y = top + 62;
-        for (int i = 0; i < names.length; i++) {
-            boolean selected = tab == tabs[i];
-            boolean hover = inside(mx, my, left + 10, y, 154, 30);
-            int color = selected ? 0xFF1F3554 : (hover ? CARD_HOVER : 0x00141B2A);
-            g.fill(left + 10, y, left + 164, y + 30, color);
-            if (selected) g.fill(left + 10, y, left + 13, y + 30, BLUE);
-            g.drawString(font, names[i], left + 22, y + 10, selected ? WHITE : MUTED, false);
-            y += 34;
+    private void renderAnimatedLobby(GuiGraphics g){
+        g.fill(0,0,width,height,BG);
+        if(!ClientCore.CONFIG.animatedBackground||!ClientCore.CONFIG.lobbyParticles)return;
+        double t=ticks*0.025;
+        for(int i=0;i<14;i++){
+            int px=(int)((Math.sin(t*(0.6+i*0.07)+i)*.5+.5)*Math.max(1,width-40));
+            int py=(int)((Math.cos(t*(0.45+i*0.04)+i*1.7)*.5+.5)*Math.max(1,height-40));
+            int s=2+i%4;g.fill(px,py,px+s,py+s,0x1839A7FF);
+            if(i%3==0)g.fill(px-18,py,px+18,py+1,0x1235D6FF);
         }
-
-        g.drawString(font, "CLIENT STATUS", left + 18, height - 76, MUTED, false);
-        g.drawString(font, "● ONLINE", left + 18, height - 59, GREEN, true);
-        g.drawString(font, "Right Shift  •  Open", left + 18, height - 41, MUTED, false);
+        int sweep=(int)((Math.sin(t*.7)+1)*.5*Math.max(1,width));
+        g.fill(sweep-110,0,sweep+110,height,0x071B55FF);
     }
-
-    private void drawContent(GuiGraphics g, int mx, int my) {
-        String title = switch (tab) {
-            case HOME -> "Lobby";
-            case HUD -> "HUD Studio";
-            case PERFORMANCE -> "Performance";
-            case MODS -> "Mod Manager";
-            case PACKS -> "Resource Pack Manager";
-            case SCHEMATICS -> "Schematic Manager";
-            case COSMETICS -> "Cosmetics Lab";
-            case SUPPORT -> "Support";
-        };
-
-        g.drawString(font, title, contentX + 18, top + 20, WHITE, true);
-        g.drawString(font, subtitle(), contentX + 18, top + 37, MUTED, false);
-
-        switch (tab) {
-            case HOME -> home(g, mx, my);
-            case HUD -> hud(g, mx, my);
-            case PERFORMANCE -> performance(g, mx, my);
-            case MODS -> mods(g, mx, my);
-            case PACKS -> packs(g, mx, my);
-            case SCHEMATICS -> schematics(g, mx, my);
-            case COSMETICS -> cosmetics(g, mx, my);
-            case SUPPORT -> support(g, mx, my);
+    private void drawShell(GuiGraphics g){
+        g.fill(left,top,width-left,height-top,PANEL);g.fill(left,top,width-left,top+3,CYAN);
+        g.fill(left+sidebarW,top+3,left+sidebarW+1,height-top,0xFF24324A);
+        int x=left+14;g.drawString(font,"TEW",x,top+12,CYAN,true);g.drawString(font,"PVP",x+32,top+12,WHITE,true);
+        g.drawString(font,"NOVA CLIENT",x,top+28,MUTED,false);
+        String s=Minecraft.getInstance().getFps()+" FPS  •  1.21.11";
+        g.drawString(font,s,width-left-font.width(s)-14,top+16,WHITE,false);
+    }
+    private void drawSidebar(GuiGraphics g,int mx,int my){
+        String[] a=compact?new String[]{"Lobby","Menu","HUD","Perf","Mods","Packs","Schematics","Cosmetics","Support"}:
+                new String[]{"Lobby","Client Menu","HUD","Performance","Mods","Resource Packs","Schematics","Cosmetics","Support"};
+        Tab[] tabs=Tab.values();int y=top+48,row=compact?28:30,gap=compact?3:4;
+        for(int i=0;i<a.length;i++){
+            boolean sel=tab==tabs[i],hov=inside(mx,my,left+7,y,sidebarW-14,row);
+            g.fill(left+7,y,left+sidebarW-7,y+row,sel?0xFF1C3657:(hov?HOVER:0x00131C2B));
+            if(sel)g.fill(left+7,y,left+10,y+row,BLUE);
+            g.drawString(font,a[i],left+17,y+(row-8)/2,sel?WHITE:MUTED,false);y+=row+gap;
         }
+        if(!compact){g.drawString(font,"TEWPVP STATUS",left+14,height-58,MUTED,false);g.drawString(font,"● ONLINE",left+14,height-42,GREEN,true);}
     }
-
-    private String subtitle() {
-        return switch (tab) {
-            case HOME -> "Your custom Minecraft lobby — fast, clean and expandable.";
-            case HUD -> "PvP HUD modules and layout controls.";
-            case PERFORMANCE -> "Reduce visual overhead and tune the client.";
-            case MODS -> "Install Fabric mods into your mods folder.";
-            case PACKS -> "Download packs and reload them without restarting.";
-            case SCHEMATICS -> "Keep .litematic, .schem and .schematic files organized.";
-            case COSMETICS -> "Cosmetic previews and client-only style options.";
-            case SUPPORT -> "Diagnostics, safety and project information.";
-        };
+    private void drawContent(GuiGraphics g,int mx,int my){
+        String title=switch(tab){
+            case HOME->"NOVA LOBBY";case MENU->"CLIENT MENU";case HUD->"HUD STUDIO";case PERFORMANCE->"PERFORMANCE";
+            case MODS->"MOD CENTER";case PACKS->"RESOURCE PACKS";case SCHEMATICS->"SCHEMATIC LIBRARY";
+            case COSMETICS->"COSMETICS LAB";case SUPPORT->"SUPPORT & DIAGNOSTICS";};
+        g.drawString(font,title,contentX+18,top+14,WHITE,true);
+        switch(tab){case HOME->home(g,mx,my);case MENU->menu(g,mx,my);case HUD->hud(g,mx,my);case PERFORMANCE->performance(g,mx,my);
+            case MODS,PACKS->catalog(g,mx,my);case SCHEMATICS->schematics(g,mx,my);case COSMETICS->cosmetics(g,mx,my);case SUPPORT->support(g,mx,my);}
     }
-
-    private void home(GuiGraphics g, int mx, int my) {
-        card(g, contentX + 18, contentY, contentW - 36, 92, mx, my);
-        g.drawString(font, "Welcome to TewPvP", contentX + 34, contentY + 18, WHITE, true);
-        g.drawString(font, "Original client UI • no proprietary Lunar/Badlion assets", contentX + 34, contentY + 36, MUTED, false);
-        g.drawString(font, "Use the sidebar to configure modules, downloads and cosmetics.", contentX + 34, contentY + 53, MUTED, false);
-
-        button(g, "HUD Studio", contentX + 18, contentY + 108, 150, 32, mx, my, BLUE);
-        button(g, "Performance", contentX + 176, contentY + 108, 150, 32, mx, my, GREEN);
-        button(g, "Mod Manager", contentX + 334, contentY + 108, 150, 32, mx, my, BLUE);
-
-        int y = contentY + 160;
-        stat(g, "FPS HUD", ClientCore.CONFIG.fpsHud, contentX + 18, y);
-        stat(g, "Keystrokes", ClientCore.CONFIG.keystrokes, contentX + 188, y);
-        stat(g, "Counters", ClientCore.CONFIG.itemCounters, contentX + 358, y);
-        stat(g, "Animated UI", ClientCore.CONFIG.animatedBackground, contentX + 528, y);
-
-        card(g, contentX + 18, y + 62, contentW - 36, 88, mx, my);
-        g.drawString(font, "Quick Actions", contentX + 34, y + 80, WHITE, true);
-        g.drawString(font, "Right Shift", contentX + 34, y + 99, BLUE, false);
-        g.drawString(font, "opens this lobby from gameplay.", contentX + 105, y + 99, MUTED, false);
-        g.drawString(font, "Resource packs can reload immediately after download.", contentX + 34, y + 119, GREEN, false);
-        g.drawString(font, "New Fabric mods are installed for the next launch.", contentX + 34, y + 137, MUTED, false);
+    private void home(GuiGraphics g,int mx,int my){
+        int y=contentY+4,h=compact?122:148;card(g,contentX+18,y,contentW-36,h,mx,my);
+        g.fill(contentX+34,y+24,contentX+40,y+32,CYAN);
+        g.drawString(font,"TEW",contentX+52,y+18,CYAN,true);g.drawString(font,"PVP NOVA",contentX+83,y+18,WHITE,true);
+        g.drawString(font,"Custom PvP client lobby • 1.21.11",contentX+52,y+38,MUTED,false);
+        g.drawString(font,"Animated • compact • original • mobile friendly",contentX+52,y+54,MUTED,false);
+        int by=y+(compact?78:92);
+        button(g,"CLIENT MENU",contentX+34,by,132,30,mx,my,BLUE);
+        button(g,"HUD STUDIO",contentX+174,by,112,30,mx,my,PURPLE);
+        button(g,"MOD CENTER",contentX+294,by,112,30,mx,my,GREEN);
+        int sy=y+(compact?132:162);
+        if(sy+54<height-12){mini(g,"FPS",String.valueOf(Minecraft.getInstance().getFps()),contentX+18,sy,92,CYAN);
+            mini(g,"HUD",ClientCore.CONFIG.hudEnabled?"ON":"OFF",contentX+118,sy,92,GREEN);
+            mini(g,"UI",ClientCore.CONFIG.animatedBackground?"LIVE":"STATIC",contentX+218,sy,110,BLUE);
+            mini(g,"BUILD","NOVA",contentX+336,sy,110,PURPLE);}
+        if(!compact){g.drawString(font,"Right Shift",contentX+18,height-28,CYAN,false);g.drawString(font,"opens the lobby from gameplay.",contentX+86,height-28,MUTED,false);}
     }
-
-    private void hud(GuiGraphics g, int mx, int my) {
-        String[] keys = {"hud","fps","keys","armor","counter","coords","cps","ping","potion","target","hit","crosshair"};
-        String[] labels = {"Master HUD","FPS","Keystrokes","Armor HUD","Item Counters","Coordinates","CPS","Ping","Potion Status","Target HUD","Hit Indicator","Custom Crosshair"};
-        for (int i = 0; i < keys.length; i++) option(g, labels[i], keys[i], contentY + i * 34, mx, my);
+    private void menu(GuiGraphics g,int mx,int my){
+        g.drawString(font,"All client controls in one compact menu",contentX+18,contentY-4,MUTED,false);
+        menuCard(g,"HUD STUDIO","PvP overlays, counters, keystrokes and crosshair",Tab.HUD,contentY+24,mx,my,BLUE);
+        menuCard(g,"PERFORMANCE","FPS, particles, weather and visual load",Tab.PERFORMANCE,contentY+94,mx,my,GREEN);
+        menuCard(g,"MOD CENTER","Search compatible Fabric mods with thumbnails",Tab.MODS,contentY+164,mx,my,PURPLE);
+        menuCard(g,"RESOURCE PACKS","Search 1.21.11 packs with thumbnails",Tab.PACKS,contentY+234,mx,my,CYAN);
+        menuCard(g,"COSMETICS","Test client-only visual styles",Tab.COSMETICS,contentY+304,mx,my,RED);
     }
-
-    private void performance(GuiGraphics g, int mx, int my) {
-        String[] keys = {"perf","particles","weather","compact","animated","glass"};
-        String[] labels = {"Performance Mode","Particles","Weather","Compact HUD","Animated Background","Glass UI"};
-        for (int i = 0; i < keys.length; i++) option(g, labels[i], keys[i], contentY + i * 34, mx, my);
-
-        int boxY = contentY + 222;
-        card(g, contentX + 18, boxY, contentW - 36, 112, mx, my);
-        g.drawString(font, "FPS Limit", contentX + 34, boxY + 20, WHITE, true);
-        g.drawString(font, ClientCore.CONFIG.fpsLimit + " FPS", contentX + 34, boxY + 43, BLUE, true);
-        button(g, "60", contentX + 140, boxY + 15, 58, 28, mx, my, BLUE);
-        button(g, "120", contentX + 204, boxY + 15, 58, 28, mx, my, BLUE);
-        button(g, "240", contentX + 268, boxY + 15, 58, 28, mx, my, BLUE);
-        button(g, "Unlimited", contentX + 332, boxY + 15, 82, 28, mx, my, BLUE);
-        g.drawString(font, "UI Scale: " + ClientCore.CONFIG.uiScale + "%", contentX + 34, boxY + 74, MUTED, false);
-        button(g, "-", contentX + 190, boxY + 61, 30, 26, mx, my, BLUE);
-        button(g, "+", contentX + 226, boxY + 61, 30, 26, mx, my, BLUE);
+    private void menuCard(GuiGraphics g,String title,String desc,Tab target,int y,int mx,int my,int accent){
+        int h=compact?56:62;card(g,contentX+18,y,contentW-36,h,mx,my);g.fill(contentX+30,y+14,contentX+34,y+h-14,accent);
+        g.drawString(font,title,contentX+46,y+12,WHITE,true);g.drawString(font,trim(desc,Math.max(120,contentW-180)),contentX+46,y+30,MUTED,false);
+        button(g,"OPEN",contentX+contentW-88,y+18,58,25,mx,my,accent);
     }
-
-    private void mods(GuiGraphics g, int mx, int my) {
-        managerHeader(g, "Fabric Mod Center", "Downloads are stored in .minecraft/mods.");
-        downloadCard(g, "Sodium", "Performance / rendering", "sodium-fabric-0.8.12+mc1.21.11.jar",
-                contentY + 92, mx, my);
-        downloadCard(g, "Mod Menu", "Installed-mod manager", "modmenu-17.0.0.jar",
-                contentY + 166, mx, my);
-        drawUrlDownload(g, "mod", "Download Mod URL", mx, my);
+    private void hud(GuiGraphics g,int mx,int my){
+        String[] k={"hud","fps","keys","armor","counter","coords","cps","ping","potion","target","hit","crosshair","sprint"};
+        String[] l={"Master HUD","FPS","Keystrokes","Armor HUD","Crystal/Totem/Obsidian Counters","Coordinates","CPS","Ping","Potion Status","Target HUD","Hit Indicator","Custom Crosshair","Toggle Sprint"};
+        for(int i=0;i<k.length;i++)option(g,l[i],k[i],contentY+i*(compact?30:32),mx,my);
     }
-
-    private void packs(GuiGraphics g, int mx, int my) {
-        managerHeader(g, "Resource Pack Center", "Packs are stored in .minecraft/resourcepacks.");
-        downloadPackCard(g, "Marlowww+", "Clean CPvP 32x pack", "Marlowww+-1.21.11.zip", contentY + 92, mx, my);
-        drawUrlDownload(g, "resourcepack", "Download Resource Pack URL", mx, my);
+    private void performance(GuiGraphics g,int mx,int my){
+        String[] k={"perf","particles","weather","compact","animated","glass","menuAnimations","lobbyParticles","itemAnimations","lowFire","cleanF3"};
+        String[] l={"Performance Mode","Particles","Weather","Compact HUD","Animated Lobby","Glass UI","Menu Animations","Lobby Particles","Item Animations","Low Fire","Clean F3"};
+        for(int i=0;i<k.length;i++)option(g,l[i],k[i],contentY+i*(compact?29:31),mx,my);
+        int by=contentY+(compact?190:195);card(g,contentX+18,by,contentW-36,92,mx,my);
+        g.drawString(font,"FPS LIMIT",contentX+32,by+13,WHITE,true);g.drawString(font,ClientCore.CONFIG.fpsLimit>=1000?"UNLIMITED":ClientCore.CONFIG.fpsLimit+" FPS",contentX+32,by+32,CYAN,true);
+        int bx=contentX+130;button(g,"60",bx,by+10,48,25,mx,my,BLUE);button(g,"120",bx+54,by+10,52,25,mx,my,BLUE);
+        button(g,"240",bx+112,by+10,52,25,mx,my,BLUE);button(g,"∞",bx+170,by+10,40,25,mx,my,BLUE);
+        g.drawString(font,"UI Scale "+ClientCore.CONFIG.uiScale+"%",contentX+32,by+64,MUTED,false);
+        button(g,"-",contentX+142,by+54,28,24,mx,my,BLUE);button(g,"+",contentX+176,by+54,28,24,mx,my,BLUE);
     }
-
-    private void schematics(GuiGraphics g, int mx, int my) {
-        managerHeader(g, "Schematic Library", "Supports .litematic, .schem and .schematic.");
-        Path dir = Minecraft.getInstance().gameDirectory.toPath().resolve("schematics");
-        long count = 0;
-        try {
-            if (Files.exists(dir)) {
-                try (var stream = Files.list(dir)) {
-                    count = stream.filter(p -> {
-                        String n = p.getFileName().toString().toLowerCase(Locale.ROOT);
-                        return n.endsWith(".litematic") || n.endsWith(".schem") || n.endsWith(".schematic");
-                    }).count();
-                }
-            }
-        } catch (Exception ignored) {}
-        g.drawString(font, "Local schematics: " + count, contentX + 34, contentY + 105, BLUE, false);
-        g.drawString(font, "Downloads are saved for compatible schematic mods to use.", contentX + 34, contentY + 124, MUTED, false);
-        drawUrlDownload(g, "schematic", "Download Schematic URL", mx, my);
+    private void catalog(GuiGraphics g,int mx,int my){
+        if(searchBox!=null)searchBox.setVisible(true);
+        button(g,catalogType==ModrinthCatalog.Type.MOD?"MODS":"PACKS",contentX+contentW-134,contentY-2,56,22,mx,my,BLUE);
+        button(g,"REFRESH",contentX+contentW-72,contentY-2,58,22,mx,my,GREEN);
+        g.drawString(font,catalogLoading?"Loading Modrinth...":(catalogError.isBlank()?"Modrinth • Minecraft 1.21.11":catalogError),contentX+18,contentY+28,catalogError.isBlank()?MUTED:RED,false);
+        int start=contentY+48,cols=compact?1:2,gap=8,w=Math.max(170,(contentW-36-gap*(cols-1))/cols),h=compact?70:78;
+        for(int i=0;i<projects.size();i++){int col=i%cols,row=i/cols;projectCard(g,projects.get(i),contentX+18+col*(w+gap),start+row*(h+gap),w,h,mx,my);}
+        if(projects.isEmpty()&&!catalogLoading){card(g,contentX+18,start,contentW-36,76,mx,my);g.drawString(font,"No compatible results yet.",contentX+34,start+18,WHITE,true);g.drawString(font,"Try another search or press REFRESH.",contentX+34,start+39,MUTED,false);}
+        int ny=height-38;button(g,"‹",contentX+18,ny,28,24,mx,my,BLUE);
+        String page="Page "+(catalogPage+1)+" / "+Math.max(1,(catalogTotal+5)/6);g.drawString(font,page,contentX+54,ny+8,MUTED,false);
+        button(g,"›",contentX+132,ny,28,24,mx,my,BLUE);
     }
-
-    private void managerHeader(GuiGraphics g, String title, String line) {
-        card(g, contentX + 18, contentY, contentW - 36, 64, -1, -1);
-        g.drawString(font, title, contentX + 34, contentY + 15, WHITE, true);
-        g.drawString(font, line, contentX + 34, contentY + 35, MUTED, false);
+    private void projectCard(GuiGraphics g,ModrinthCatalog.Project p,int x,int y,int w,int h,int mx,int my){
+        boolean hov=inside(mx,my,x,y,w,h);g.fill(x,y,x+w,y+h,hov?HOVER:CARD);g.fill(x,y,x+3,y+h,p.projectType().equals("mod")?BLUE:GREEN);
+        Identifier icon=ModrinthCatalog.icon(p.iconUrl());
+        if(icon!=null)g.blit(RenderPipelines.GUI_TEXTURED,icon,x+10,y+10,0f,0f,40,40,256,256);
+        else{g.fill(x+10,y+10,x+50,y+50,0xFF253A58);String s=p.title().isBlank()?"?":p.title().substring(0,1);g.drawString(font,s,x+24,y+23,WHITE,true);}
+        g.drawString(font,trim(p.title(),Math.max(70,w-132)),x+60,y+10,WHITE,true);
+        g.drawString(font,trim(p.description(),Math.max(80,w-132)),x+60,y+28,MUTED,false);
+        g.drawString(font,formatDownloads(p.downloads())+" downloads",x+60,y+45,0xFF71809A,false);
+        button(g,"GET",x+w-62,y+h-31,48,23,mx,my,GREEN);
     }
-
-    private void downloadCard(GuiGraphics g, String name, String desc, String file, int y, int mx, int my) {
-        card(g, contentX + 18, y, contentW - 36, 62, mx, my);
-        g.fill(contentX + 30, y + 12, contentX + 66, y + 48, 0xFF203A62);
-        g.drawString(font, name.substring(0, 1), contentX + 43, y + 23, WHITE, true);
-        g.drawString(font, name, contentX + 78, y + 12, WHITE, true);
-        g.drawString(font, desc, contentX + 78, y + 29, MUTED, false);
-        g.drawString(font, file, contentX + 78, y + 44, 0xFF71809A, false);
-        button(g, "INSTALL", contentX + contentW - 112, y + 18, 82, 25, mx, my, BLUE);
+    private void schematics(GuiGraphics g,int mx,int my){
+        Path dir=Minecraft.getInstance().gameDirectory.toPath().resolve(".tewpvp-nova").resolve("schematics");long count=0;
+        try{Files.createDirectories(dir);try(var s=Files.list(dir)){count=s.filter(p->{String n=p.getFileName().toString().toLowerCase(Locale.ROOT);return n.endsWith(".litematic")||n.endsWith(".schem")||n.endsWith(".schematic");}).count();}}catch(Exception ignored){}
+        card(g,contentX+18,contentY+4,contentW-36,104,mx,my);g.drawString(font,"LOCAL SCHEMATICS",contentX+34,contentY+20,WHITE,true);
+        g.drawString(font,count+" files in .tewpvp-nova/schematics",contentX+34,contentY+42,CYAN,false);g.drawString(font,"Supports .litematic • .schem • .schematic",contentX+34,contentY+61,MUTED,false);
+        button(g,"OPEN FOLDER",contentX+34,contentY+72,104,25,mx,my,BLUE);
+        card(g,contentX+18,contentY+122,contentW-36,86,mx,my);g.drawString(font,"DIRECT DOWNLOAD",contentX+34,contentY+140,WHITE,true);
+        g.drawString(font,"Schematics stay local; downloads never execute as code.",contentX+34,contentY+160,MUTED,false);
+        g.drawString(font,"Use the project's URL downloader when needed.",contentX+34,contentY+179,GREEN,false);
     }
-
-    private void downloadPackCard(GuiGraphics g, String name, String desc, String file, int y, int mx, int my) {
-        card(g, contentX + 18, y, contentW - 36, 62, mx, my);
-        g.fill(contentX + 30, y + 12, contentX + 66, y + 48, 0xFF294A3C);
-        g.drawString(font, "P", contentX + 43, y + 23, WHITE, true);
-        g.drawString(font, name, contentX + 78, y + 12, WHITE, true);
-        g.drawString(font, desc, contentX + 78, y + 29, MUTED, false);
-        g.drawString(font, file, contentX + 78, y + 44, 0xFF71809A, false);
-        button(g, "DOWNLOAD", contentX + contentW - 124, y + 18, 94, 25, mx, my, GREEN);
+    private void cosmetics(GuiGraphics g,int mx,int my){
+        card(g,contentX+18,contentY+4,contentW-36,88,mx,my);g.drawString(font,"COSMETICS LAB",contentX+34,contentY+20,WHITE,true);
+        g.drawString(font,"Client-only visual tests. No gameplay advantage.",contentX+34,contentY+40,MUTED,false);
+        button(g,ClientCore.CONFIG.cosmetics?"ENABLED":"DISABLED",contentX+34,contentY+53,88,24,mx,my,ClientCore.CONFIG.cosmetics?GREEN:RED);
+        String[] a={"Neon Crosshair","Orbit Ring","Hit Flash","Lobby Glow","Nameplate","Motion Trail"};int cols=compact?1:2,gap=8,w=Math.max(170,(contentW-36-gap*(cols-1))/cols);
+        for(int i=0;i<a.length;i++){int x=contentX+18+(i%cols)*(w+gap),y=contentY+104+(i/cols)*52;card(g,x,y,w,44,mx,my);g.fill(x+12,y+13,x+18+(int)((Math.sin(ticks*.08+i)+1)*3),y+31,i%2==0?BLUE:PURPLE);g.drawString(font,a[i],x+28,y+16,WHITE,false);}
     }
-
-    private void cosmetics(GuiGraphics g, int mx, int my) {
-        card(g, contentX + 18, contentY, contentW - 36, 92, mx, my);
-        g.drawString(font, "Cosmetics Lab", contentX + 34, contentY + 18, WHITE, true);
-        g.drawString(font, "Client-only cosmetic previews. No gameplay advantage.", contentX + 34, contentY + 38, MUTED, false);
-        g.drawString(font, "Current style: " + (ClientCore.CONFIG.cosmetics ? "Enabled" : "Disabled"), contentX + 34, contentY + 57, BLUE, false);
-        button(g, ClientCore.CONFIG.cosmetics ? "Disable Cosmetics" : "Enable Cosmetics",
-                contentX + 34, contentY + 66, 150, 26, mx, my, BLUE);
-
-        String[] cosmetics = {"Neon Crosshair", "Blue Trail", "Minimal Hit Marker", "Lobby Glow"};
-        int y = contentY + 112;
-        for (int i = 0; i < cosmetics.length; i++) {
-            int bx = contentX + 18 + (i % 2) * ((contentW - 52) / 2);
-            int by = y + (i / 2) * 62;
-            card(g, bx, by, (contentW - 52) / 2 - 10, 50, mx, my);
-            g.drawString(font, "◆", bx + 16, by + 17, BLUE, true);
-            g.drawString(font, cosmetics[i], bx + 32, by + 17, WHITE, false);
-        }
+    private void support(GuiGraphics g,int mx,int my){
+        card(g,contentX+18,contentY+4,contentW-36,128,mx,my);g.drawString(font,"SAFE CLIENT SETUP",contentX+34,contentY+20,WHITE,true);
+        g.drawString(font,"Downloads are restricted to Modrinth/GitHub sources.",contentX+34,contentY+40,MUTED,false);
+        g.drawString(font,"Fabric mods need a restart; resource packs can reload.",contentX+34,contentY+58,MUTED,false);
+        button(g,"CREATE DIAGNOSTICS",contentX+34,contentY+91,136,25,mx,my,BLUE);
+        card(g,contentX+18,contentY+144,contentW-36,72,mx,my);g.drawString(font,"TewPvP Nova Client",contentX+34,contentY+162,CYAN,true);
+        g.drawString(font,"Original UI • no proprietary client assets",contentX+34,contentY+183,MUTED,false);
     }
-
-    private void support(GuiGraphics g, int mx, int my) {
-        card(g, contentX + 18, contentY, contentW - 36, 112, mx, my);
-        g.drawString(font, "Support & Diagnostics", contentX + 34, contentY + 18, WHITE, true);
-        g.drawString(font, "Send the crash log and Minecraft/Fabric versions if something breaks.", contentX + 34, contentY + 39, MUTED, false);
-        g.drawString(font, "Safe mode: disable the last downloaded mod and restart.", contentX + 34, contentY + 58, MUTED, false);
-        g.drawString(font, "TewPvP Custom Client • Minecraft 1.21.11", contentX + 34, contentY + 79, BLUE, false);
-        button(g, "Create Diagnostics Folder", contentX + 34, contentY + 88, 174, 28, mx, my, BLUE);
-
-        card(g, contentX + 18, contentY + 130, contentW - 36, 74, mx, my);
-        g.drawString(font, "Important", contentX + 34, contentY + 148, RED, true);
-        g.drawString(font, "Only install files you trust. The manager rejects unapproved hosts.", contentX + 34, contentY + 169, MUTED, false);
-        g.drawString(font, "No telemetry or remote code execution is built into the manager.", contentX + 34, contentY + 187, MUTED, false);
+    private void option(GuiGraphics g,String label,String key,int y,int mx,int my){
+        int x=contentX+18,w=Math.max(190,contentW-36),h=compact?26:28;if(y+h>height-8)return;
+        boolean on=switch(key){
+            case "hud"->ClientCore.CONFIG.hudEnabled;case "fps"->ClientCore.CONFIG.fpsHud;case "keys"->ClientCore.CONFIG.keystrokes;
+            case "armor"->ClientCore.CONFIG.armorHud;case "counter"->ClientCore.CONFIG.itemCounters;case "coords"->ClientCore.CONFIG.coords;
+            case "perf"->ClientCore.CONFIG.performanceMode;case "compact"->ClientCore.CONFIG.compactHud;case "particles"->ClientCore.CONFIG.particles;
+            case "weather"->ClientCore.CONFIG.weather;case "hit"->ClientCore.CONFIG.hitIndicator;case "cps"->ClientCore.CONFIG.cpsHud;
+            case "ping"->ClientCore.CONFIG.pingHud;case "potion"->ClientCore.CONFIG.potionHud;case "target"->ClientCore.CONFIG.targetHud;
+            case "crosshair"->ClientCore.CONFIG.customCrosshair;case "sprint"->ClientCore.CONFIG.sprintToggle;case "animated"->ClientCore.CONFIG.animatedBackground;
+            case "glass"->ClientCore.CONFIG.glassUi;case "menuAnimations"->ClientCore.CONFIG.menuAnimations;case "lobbyParticles"->ClientCore.CONFIG.lobbyParticles;
+            case "itemAnimations"->ClientCore.CONFIG.itemAnimations;case "lowFire"->ClientCore.CONFIG.lowFire;case "cleanF3"->ClientCore.CONFIG.cleanF3;default->false;};
+        g.fill(x,y,x+w,y+h,inside(mx,my,x,y,w,h)?HOVER:CARD);g.drawString(font,label,x+12,y+8,WHITE,false);g.drawString(font,on?"ON":"OFF",x+w-36,y+8,on?GREEN:RED,true);
     }
+    private void mini(GuiGraphics g,String a,String b,int x,int y,int w,int accent){g.fill(x,y,x+w,y+46,CARD);g.drawString(font,a,x+9,y+8,MUTED,false);g.drawString(font,b,x+9,y+25,accent,true);}
+    private void card(GuiGraphics g,int x,int y,int w,int h,int mx,int my){g.fill(x+2,y+2,x+w+2,y+h+2,0x50000000);g.fill(x,y,x+w,y+h,inside(mx,my,x,y,w,h)?HOVER:CARD);g.fill(x,y,x+w,y+1,0x221C9BFF);}
+    private void button(GuiGraphics g,String s,int x,int y,int w,int h,int mx,int my,int accent){g.fill(x,y,x+w,y+h,inside(mx,my,x,y,w,h)?accent:0xFF1D2B40);g.drawString(font,s,x+(w-font.width(s))/2,y+(h-8)/2,WHITE,true);}
+    private String trim(String v,int max){if(v==null)return "";if(font.width(v)<=max)return v;String o=v;while(o.length()>1&&font.width(o+"…")>max)o=o.substring(0,o.length()-1);return o+"…";}
+    private String formatDownloads(long n){if(n>=1000000)return String.format(Locale.ROOT,"%.1fM",n/1000000.0);if(n>=1000)return String.format(Locale.ROOT,"%.1fK",n/1000.0);return String.valueOf(n);}
 
-    private void drawUrlDownload(GuiGraphics g, String type, String label, int mx, int my) {
-        int y = contentY + contentH - 74;
-        g.drawString(font, label, contentX + 18, y - 18, MUTED, false);
-        button(g, "DOWNLOAD", contentX + contentW - 112, y - 2, 94, 24, mx, my, GREEN);
-    }
-
-    private void stat(GuiGraphics g, String label, boolean on, int x, int y) {
-        g.fill(x, y, x + 150, y + 48, CARD);
-        g.drawString(font, label, x + 10, y + 9, MUTED, false);
-        g.drawString(font, on ? "ON" : "OFF", x + 10, y + 27, on ? GREEN : RED, true);
-    }
-
-    private void option(GuiGraphics g, String label, String key, int y, int mx, int my) {
-        int x = contentX + 18;
-        int w = Math.min(520, contentW - 36);
-        boolean on = switch (key) {
-            case "hud" -> ClientCore.CONFIG.hudEnabled;
-            case "fps" -> ClientCore.CONFIG.fpsHud;
-            case "keys" -> ClientCore.CONFIG.keystrokes;
-            case "armor" -> ClientCore.CONFIG.armorHud;
-            case "counter" -> ClientCore.CONFIG.itemCounters;
-            case "coords" -> ClientCore.CONFIG.coords;
-            case "perf" -> ClientCore.CONFIG.performanceMode;
-            case "compact" -> ClientCore.CONFIG.compactHud;
-            case "particles" -> ClientCore.CONFIG.particles;
-            case "weather" -> ClientCore.CONFIG.weather;
-            case "hit" -> ClientCore.CONFIG.hitIndicator;
-            case "cps" -> ClientCore.CONFIG.cpsHud;
-            case "ping" -> ClientCore.CONFIG.pingHud;
-            case "potion" -> ClientCore.CONFIG.potionHud;
-            case "target" -> ClientCore.CONFIG.targetHud;
-            case "crosshair" -> ClientCore.CONFIG.customCrosshair;
-            case "animated" -> ClientCore.CONFIG.animatedBackground;
-            case "glass" -> ClientCore.CONFIG.glassUi;
-            default -> false;
-        };
-        boolean hover = inside(mx, my, x, y, w, 28);
-        g.fill(x, y, x + w, y + 28, hover ? CARD_HOVER : CARD);
-        g.drawString(font, label, x + 12, y + 9, WHITE, false);
-        g.drawString(font, on ? "ON" : "OFF", x + w - 38, y + 9, on ? GREEN : RED, true);
-    }
-
-    private void card(GuiGraphics g, int x, int y, int w, int h, int mx, int my) {
-        boolean hover = mx >= 0 && inside(mx, my, x, y, w, h);
-        g.fill(x + 2, y + 2, x + w + 2, y + h + 2, 0x44000000);
-        g.fill(x, y, x + w, y + h, hover ? CARD_HOVER : CARD);
-    }
-
-    private void button(GuiGraphics g, String text, int x, int y, int w, int h, int mx, int my, int accent) {
-        boolean hover = inside(mx, my, x, y, w, h);
-        g.fill(x, y, x + w, y + h, hover ? accent : 0xFF1D2B40);
-        g.drawString(font, text, x + (w - font.width(text)) / 2, y + (h - 8) / 2, WHITE, true);
-    }
-
-    @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        if (super.mouseClicked(event, doubleClick)) return true;
-        if (event.button() != 0) return false;
-
-        double mx = event.x();
-        double my = event.y();
-
-        String[] names = {"Lobby", "HUD", "Performance", "Mods", "Resource Packs", "Schematics", "Cosmetics", "Support"};
-        Tab[] tabs = Tab.values();
-        int y = top + 62;
-        for (int i = 0; i < names.length; i++) {
-            if (inside(mx, my, left + 10, y, 154, 30)) {
-                tab = tabs[i];
-                urlBox.setVisible(tab == Tab.MODS || tab == Tab.PACKS || tab == Tab.SCHEMATICS);
-                return true;
-            }
-            y += 34;
-        }
-
-        if (tab == Tab.HOME) {
-            if (inside(mx, my, contentX + 18, contentY + 108, 150, 32)) tab = Tab.HUD;
-            else if (inside(mx, my, contentX + 176, contentY + 108, 150, 32)) tab = Tab.PERFORMANCE;
-            else if (inside(mx, my, contentX + 334, contentY + 108, 150, 32)) tab = Tab.MODS;
-            urlBox.setVisible(false);
-            return true;
-        }
-
-        if (tab == Tab.HUD) return clickOption(mx, my, new String[]{"hud","fps","keys","armor","counter","coords","cps","ping","potion","target","hit","crosshair"}, contentY);
-
-        if (tab == Tab.PERFORMANCE) {
-            if (clickOption(mx, my, new String[]{"perf","particles","weather","compact","animated","glass"}, contentY)) return true;
-            int boxY = contentY + 222;
-            if (inside(mx, my, contentX + 140, boxY + 15, 58, 28)) ClientCore.CONFIG.fpsLimit = 60;
-            else if (inside(mx, my, contentX + 204, boxY + 15, 58, 28)) ClientCore.CONFIG.fpsLimit = 120;
-            else if (inside(mx, my, contentX + 268, boxY + 15, 58, 28)) ClientCore.CONFIG.fpsLimit = 240;
-            else if (inside(mx, my, contentX + 332, boxY + 15, 82, 28)) ClientCore.CONFIG.fpsLimit = 1000;
-            else if (inside(mx, my, contentX + 190, boxY + 61, 30, 26)) ClientCore.CONFIG.uiScale = Math.max(75, ClientCore.CONFIG.uiScale - 5);
-            else if (inside(mx, my, contentX + 226, boxY + 61, 30, 26)) ClientCore.CONFIG.uiScale = Math.min(125, ClientCore.CONFIG.uiScale + 5);
-            return true;
-        }
-
-        if (tab == Tab.MODS) {
-            if (inside(mx, my, contentX + contentW - 112, contentY + 110, 82, 25)) {
-                DownloadManager.downloadMod("https://cdn.modrinth.com/data/AANobbMI/versions/NFkjnzWE/sodium-fabric-0.8.12%2Bmc1.21.11.jar", "sodium-fabric-0.8.12+mc1.21.11.jar");
-            } else if (inside(mx, my, contentX + contentW - 112, contentY + 184, 82, 25)) {
-                DownloadManager.downloadMod("https://cdn.modrinth.com/data/mOgUt4GM/versions/Tyk71iSw/modmenu-17.0.0.jar", "modmenu-17.0.0.jar");
-            } else if (inside(mx, my, contentX + contentW - 112, contentY + contentH - 76, 94, 24)) {
-                downloadFromBox("mod");
-            }
-            return true;
-        }
-
-        if (tab == Tab.PACKS) {
-            if (inside(mx, my, contentX + contentW - 124, contentY + 110, 94, 25)) {
-                DownloadManager.downloadResourcePack("https://cdn.modrinth.com/data/roQwWt6y/versions/F5ruBnE0/Vanilla%2B%201.21.11.zip", "Marlowww+-1.21.11.zip");
-            } else if (inside(mx, my, contentX + contentW - 112, contentY + contentH - 76, 94, 24)) {
-                downloadFromBox("resourcepack");
-            }
-            return true;
-        }
-
-        if (tab == Tab.SCHEMATICS) {
-            if (inside(mx, my, contentX + contentW - 112, contentY + contentH - 76, 94, 24)) downloadFromBox("schematic");
-            return true;
-        }
-
-        if (tab == Tab.COSMETICS && inside(mx, my, contentX + 34, contentY + 66, 150, 26)) {
-            ClientCore.CONFIG.cosmetics = !ClientCore.CONFIG.cosmetics;
-            return true;
-        }
-
-        if (tab == Tab.SUPPORT && inside(mx, my, contentX + 34, contentY + 88, 174, 28)) {
-            try {
-                Files.createDirectories(Minecraft.getInstance().gameDirectory.toPath().resolve("tewpvp-diagnostics"));
-                ClientCore.notify(Minecraft.getInstance(), "پوشه diagnostics ساخته شد.");
-            } catch (Exception ignored) {}
-            return true;
-        }
-
+    @Override public boolean mouseClicked(MouseButtonEvent e,boolean dbl){
+        if(super.mouseClicked(e,dbl))return true;if(e.button()!=0)return false;double mx=e.x(),my=e.y();
+        Tab[] tabs=Tab.values();int y=top+48,row=compact?28:30,gap=compact?3:4;
+        for(Tab t:tabs){if(inside(mx,my,left+7,y,sidebarW-14,row)){tab=t;if(searchBox!=null)searchBox.setVisible(tab==Tab.MODS||tab==Tab.PACKS);
+                if(tab==Tab.MODS){catalogType=ModrinthCatalog.Type.MOD;catalogPage=0;loadCatalog();}else if(tab==Tab.PACKS){catalogType=ModrinthCatalog.Type.RESOURCE_PACK;catalogPage=0;loadCatalog();}return true;}y+=row+gap;}
+        if(tab==Tab.HOME){int by=contentY+(compact?78:92);if(inside(mx,my,contentX+34,by,132,30))tab=Tab.MENU;else if(inside(mx,my,contentX+174,by,112,30))tab=Tab.HUD;else if(inside(mx,my,contentX+294,by,112,30))tab=Tab.MODS;if(searchBox!=null)searchBox.setVisible(tab==Tab.MODS||tab==Tab.PACKS);return true;}
+        if(tab==Tab.MENU){if(inside(mx,my,contentX+contentW-88,contentY+24,58,62))tab=Tab.HUD;else if(inside(mx,my,contentX+contentW-88,contentY+94,58,62))tab=Tab.PERFORMANCE;
+            else if(inside(mx,my,contentX+contentW-88,contentY+164,58,62)){tab=Tab.MODS;catalogType=ModrinthCatalog.Type.MOD;loadCatalog();}
+            else if(inside(mx,my,contentX+contentW-88,contentY+234,58,62)){tab=Tab.PACKS;catalogType=ModrinthCatalog.Type.RESOURCE_PACK;loadCatalog();}
+            else if(inside(mx,my,contentX+contentW-88,contentY+304,58,62))tab=Tab.COSMETICS;if(searchBox!=null)searchBox.setVisible(tab==Tab.MODS||tab==Tab.PACKS);return true;}
+        if(tab==Tab.HUD)return clickOption(mx,my,new String[]{"hud","fps","keys","armor","counter","coords","cps","ping","potion","target","hit","crosshair","sprint"},contentY);
+        if(tab==Tab.PERFORMANCE){if(clickOption(mx,my,new String[]{"perf","particles","weather","compact","animated","glass","menuAnimations","lobbyParticles","itemAnimations","lowFire","cleanF3"},contentY))return true;
+            int by=contentY+(compact?190:195),bx=contentX+130;if(inside(mx,my,bx,by+10,48,25))ClientCore.CONFIG.fpsLimit=60;else if(inside(mx,my,bx+54,by+10,52,25))ClientCore.CONFIG.fpsLimit=120;else if(inside(mx,my,bx+112,by+10,52,25))ClientCore.CONFIG.fpsLimit=240;else if(inside(mx,my,bx+170,by+10,40,25))ClientCore.CONFIG.fpsLimit=1000;
+            else if(inside(mx,my,contentX+142,by+54,28,24))ClientCore.CONFIG.uiScale=Math.max(75,ClientCore.CONFIG.uiScale-5);else if(inside(mx,my,contentX+176,by+54,28,24))ClientCore.CONFIG.uiScale=Math.min(110,ClientCore.CONFIG.uiScale+5);return true;}
+        if(tab==Tab.MODS||tab==Tab.PACKS)return clickCatalog(mx,my);
+        if(tab==Tab.COSMETICS&&inside(mx,my,contentX+34,contentY+53,88,24)){ClientCore.CONFIG.cosmetics=!ClientCore.CONFIG.cosmetics;return true;}
+        if(tab==Tab.SUPPORT&&inside(mx,my,contentX+34,contentY+91,136,25)){try{Files.createDirectories(Minecraft.getInstance().gameDirectory.toPath().resolve(".tewpvp-nova").resolve("diagnostics"));ClientCore.notify(Minecraft.getInstance(),"پوشه diagnostics ساخته شد.");}catch(Exception ignored){}return true;}
         return true;
     }
-
-    private boolean clickOption(double mx, double my, String[] keys, int startY) {
-        int y = startY;
-        for (String key : keys) {
-            if (inside(mx, my, contentX + 18, y, Math.min(520, contentW - 36), 28)) {
-                ClientCore.CONFIG.toggle(key);
-                return true;
-            }
-            y += 34;
-        }
-        return false;
+    private boolean clickCatalog(double mx,double my){
+        if(inside(mx,my,contentX+contentW-134,contentY-2,56,22)){catalogType=catalogType==ModrinthCatalog.Type.MOD?ModrinthCatalog.Type.RESOURCE_PACK:ModrinthCatalog.Type.MOD;catalogPage=0;loadCatalog();return true;}
+        if(inside(mx,my,contentX+contentW-72,contentY-2,58,22)){loadCatalog();return true;}
+        int cols=compact?1:2,gap=8,w=Math.max(170,(contentW-36-gap*(cols-1))/cols),h=compact?70:78,start=contentY+48;
+        for(int i=0;i<projects.size();i++){int col=i%cols,row=i/cols,x=contentX+18+col*(w+gap),y=start+row*(h+gap);if(inside(mx,my,x+w-62,y+h-31,48,23)){ModrinthCatalog.download(projects.get(i),catalogType);return true;}}
+        int ny=height-38;if(inside(mx,my,contentX+18,ny,28,24)&&catalogPage>0){catalogPage--;loadCatalog();return true;}
+        if(inside(mx,my,contentX+132,ny,28,24)&&(catalogPage+1)*6<catalogTotal){catalogPage++;loadCatalog();return true;}return true;
     }
-
-    private void downloadFromBox(String type) {
-        String url = urlBox.getValue().trim();
-        if (url.isBlank()) {
-            ClientCore.notify(Minecraft.getInstance(), "اول لینک دانلود را وارد کن.");
-            return;
-        }
-
-        String lower = url.toLowerCase(Locale.ROOT);
-        String fileName = lower.substring(lower.lastIndexOf('/') + 1);
-        int query = fileName.indexOf('?');
-        if (query >= 0) fileName = fileName.substring(0, query);
-        if (fileName.isBlank()) fileName = "downloaded-file";
-
-        if ("mod".equals(type) && !fileName.endsWith(".jar")) fileName += ".jar";
-        if ("resourcepack".equals(type) && !fileName.endsWith(".zip")) fileName += ".zip";
-        if ("schematic".equals(type) && !(fileName.endsWith(".litematic") || fileName.endsWith(".schem") || fileName.endsWith(".schematic"))) {
-            ClientCore.notify(Minecraft.getInstance(), "پسوند شماتیک معتبر نیست.");
-            return;
-        }
-
-        DownloadManager.downloadCustom(url, fileName, type);
-        urlBox.setValue("");
-    }
-
-    private boolean inside(double mx, double my, int x, int y, int w, int h) {
-        return mx >= x && mx <= x + w && my >= y && my <= y + h;
-    }
-
-    @Override
-    public void onClose() {
-        Minecraft.getInstance().setScreen(null);
-    }
-
-    @Override
-    public boolean isPauseScreen() {
-        return false;
-    }
+    private void loadCatalog(){catalogLoading=true;catalogError="";String q=searchBox==null?"":searchBox.getValue().trim();ModrinthCatalog.search(catalogType,q,catalogPage,r->{projects=r.projects();catalogTotal=r.total();catalogError=r.error()==null?"":r.error();catalogLoading=false;});}
+    private boolean clickOption(double mx,double my,String[] keys,int sy){int y=sy,step=compact?30:32,h=compact?26:28;for(String k:keys){if(inside(mx,my,contentX+18,y,Math.max(190,contentW-36),h)){ClientCore.CONFIG.toggle(k);return true;}y+=step;}return false;}
+    @Override public boolean keyPressed(net.minecraft.client.input.KeyEvent e){if((tab==Tab.MODS||tab==Tab.PACKS)&&e.key()==257){catalogPage=0;loadCatalog();return true;}return super.keyPressed(e);}
+    private boolean inside(double mx,double my,int x,int y,int w,int h){return mx>=x&&mx<=x+w&&my>=y&&my<=y+h;}
+    @Override public void onClose(){Minecraft.getInstance().setScreen(null);}
+    @Override public boolean isPauseScreen(){return false;}
 }
