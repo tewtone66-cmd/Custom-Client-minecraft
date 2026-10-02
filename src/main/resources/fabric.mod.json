@@ -1,19 +1,16 @@
 {
   "schemaVersion": 1,
-  "id": "client",
+  "id": "customclient",
   "version": "${version}",
-  "name": "Custom Client",
-  "description": "A lightweight, non-cheating Minecraft PvP and performance client.",
-  "authors": ["Developer"],
+  "name": "TewPvP Custom Client",
+  "description": "Original client-side PvP HUD, animated settings and lightweight performance controls for Minecraft 1.21.11.",
+  "authors": ["tewtone66-cmd"],
   "license": "MIT",
   "environment": "client",
-  "entrypoints": {
-    "client": ["com.client.ClientCore"]
-  },
+  "entrypoints": { "client": ["tewtone66.customclient.ClientCore"] },
   "depends": {
     "fabricloader": ">=0.18.1",
     "minecraft": "1.21.11",
-    "java": ">=21",
-    "fabric-api": ">=0.141.6"
+    "fabric-api": ">=0.141.3"
   }
 }
