@@ -6,7 +6,7 @@ public final class Config {
     public boolean potionHud=true,targetHud=false,customCrosshair=true,sprintToggle=false,animatedBackground=true,glassUi=true,cosmetics=true;
     public boolean menuAnimations=true,lobbyParticles=true,itemAnimations=true,lowFire=true,cleanF3=true;
     public boolean neonCrosshair=true,orbitRing=false,hitFlash=true,lobbyGlow=true,nameplate=false,motionTrail=false;
-    public int fpsLimit=120,uiScale=100,accent=0xFF39A7FF;
+    public int fpsLimit=120,uiScale=100,accent=0xFFFF6BD6;
     public void toggle(String key){
         switch(key){
             case "hud"->hudEnabled=!hudEnabled; case "fps"->fpsHud=!fpsHud; case "keys"->keystrokes=!keystrokes;
