@@ -48,7 +48,7 @@ public final class ModrinthCatalog {
         JsonArray files=versionsJson.get(0).getAsJsonObject().getAsJsonArray("files");if(files==null||files.isEmpty())throw new IllegalStateException("فایل دانلودی پیدا نشد.");
         JsonObject selected=files.get(0).getAsJsonObject();for(var e:files){JsonObject c=e.getAsJsonObject();if(c.has("primary")&&c.get("primary").getAsBoolean()){selected=c;break;}}
         String u=text(selected,"url"),n=text(selected,"filename");if(u.isBlank()||n.isBlank())throw new IllegalStateException("اطلاعات فایل ناقص است.");
-        if(type==Type.MOD)DownloadManager.downloadMod(u,n);else DownloadManager.downloadResourcePack(u,n);
+        if(type==Type.MOD)DownloadManager.downloadMod(u,n,project.id());else DownloadManager.downloadResourcePack(u,n,project.id());
     }catch(Exception e){Minecraft.getInstance().execute(()->ClientCore.notify(Minecraft.getInstance(),"دانلود نشد: "+e.getMessage()));}});}
     public static Identifier icon(String url){
         if(url==null||url.isBlank())return null;Identifier ready=ICONS.get(url);if(ready!=null)return ready;if(LOADING.putIfAbsent(url,true)!=null)return null;
